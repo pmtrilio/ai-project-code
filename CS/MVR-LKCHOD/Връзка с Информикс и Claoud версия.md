@@ -1,11 +1,25 @@
-public function hashName($path = null)
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.ServiceProcess;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace WindowsService
+{
+    static class Program
     {
-        if ($path) {
-            $path = rtrim($path, '/').'/';
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        static void Main()
+        {
+            ServiceBase[] ServicesToRun;
+            ServicesToRun = new ServiceBase[]
+            {
+                new WindowsService()
+            };
+            ServiceBase.Run(ServicesToRun);
         }
-
-        $hash = $this->hashName ?: $this->hashName = Str::random(40);
-
-        if ($extension = $this->guessExtension()) {
-            $extension = '.'.$extension;
-        }
+    }
+}
