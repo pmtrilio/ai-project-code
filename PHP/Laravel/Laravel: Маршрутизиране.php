@@ -58,4 +58,3 @@ class Router implements BindingRegistrar, RegistrarContract
 
     /**
      * The route collection instance.
-?>
