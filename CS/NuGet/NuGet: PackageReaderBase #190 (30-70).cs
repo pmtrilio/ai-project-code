@@ -1,0 +1,41 @@
+        protected IFrameworkNameProvider FrameworkProvider { get; set; }
+        protected IFrameworkCompatibilityProvider CompatibilityProvider { get; set; }
+
+        /// <summary>
+        /// Instantiates a new <see cref="PackageReaderBase" /> class.
+        /// </summary>
+        /// <param name="frameworkProvider">A framework mapping provider.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="frameworkProvider" /> is <see langword="null" />.</exception>
+        public PackageReaderBase(IFrameworkNameProvider frameworkProvider)
+            : this(frameworkProvider, new CompatibilityProvider(frameworkProvider))
+        {
+        }
+
+        /// <summary>
+        /// Instantiates a new <see cref="PackageReaderBase" /> class.
+        /// </summary>
+        /// <param name="frameworkProvider">A framework mapping provider.</param>
+        /// <param name="compatibilityProvider">A framework compatibility provider.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="frameworkProvider" /> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="compatibilityProvider" /> is <see langword="null" />.</exception>
+        public PackageReaderBase(IFrameworkNameProvider frameworkProvider, IFrameworkCompatibilityProvider compatibilityProvider)
+        {
+            if (frameworkProvider == null)
+            {
+                throw new ArgumentNullException(nameof(frameworkProvider));
+            }
+
+            if (compatibilityProvider == null)
+            {
+                throw new ArgumentNullException(nameof(compatibilityProvider));
+            }
+
+            FrameworkProvider = frameworkProvider;
+            CompatibilityProvider = compatibilityProvider;
+        }
+
+        #region IPackageCoreReader implementation
+
+        public abstract Stream GetStream(string path);
+
+        public abstract IEnumerable<string> GetFiles();
