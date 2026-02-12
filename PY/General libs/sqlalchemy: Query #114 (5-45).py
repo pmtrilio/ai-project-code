@@ -1,0 +1,41 @@
+# This module is part of SQLAlchemy and is released under
+# the MIT License: https://www.opensource.org/licenses/mit-license.php
+
+"""The Query class and support.
+
+Defines the :class:`_query.Query` class, the central
+construct used by the ORM to construct database queries.
+
+The :class:`_query.Query` class should not be confused with the
+:class:`_expression.Select` class, which defines database
+SELECT operations at the SQL (non-ORM) level.  ``Query`` differs from
+``Select`` in that it returns ORM-mapped objects and interacts with an
+ORM session, whereas the ``Select`` construct interacts directly with the
+database to return iterable result sets.
+
+"""
+from __future__ import annotations
+
+import collections.abc as collections_abc
+import operator
+from typing import Any
+from typing import Callable
+from typing import cast
+from typing import Dict
+from typing import Generic
+from typing import Iterable
+from typing import Iterator
+from typing import List
+from typing import Literal
+from typing import Mapping
+from typing import Optional
+from typing import overload
+from typing import Sequence
+from typing import Tuple
+from typing import Type
+from typing import TYPE_CHECKING
+from typing import TypeVar
+from typing import Union
+
+from . import attributes
+from . import interfaces
