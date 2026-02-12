@@ -1,0 +1,40 @@
+      | ( putheader() )*  endheaders()
+      v
+    Request-sent
+      |\_____________________________
+      |                              | getresponse() raises
+      | response = getresponse()     | ConnectionError
+      v                              v
+    Unread-response                Idle
+    [Response-headers-read]
+      |\____________________
+      |                     |
+      | response.read()     | putrequest()
+      v                     v
+    Idle                  Req-started-unread-response
+                     ______/|
+                   /        |
+   response.read() |        | ( putheader() )*  endheaders()
+                   v        v
+       Request-started    Req-sent-unread-response
+                            |
+                            | response.read()
+                            v
+                          Request-sent
+
+This diagram presents the following rules:
+  -- a second request may not be started until {response-headers-read}
+  -- a response [object] cannot be retrieved until {request-sent}
+  -- there is no differentiation between an unread response body and a
+     partially read response body
+
+Note: this enforcement is applied by the HTTPConnection class. The
+      HTTPResponse class does not enforce this state machine, which
+      implies sophisticated clients may accelerate the request/response
+      pipeline. Caution should be taken, though: accelerating the states
+      beyond the above pattern may imply knowledge of the server's
+      connection-close behavior for certain requests. For example, it
+      is impossible to tell whether the server will close the connection
+      UNTIL the response headers have been read; this means that further
+      requests cannot be placed into the pipeline until it is known that
+      the server will NOT be closing the connection.
