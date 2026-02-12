@@ -1,0 +1,41 @@
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+namespace Serilog;
+
+/// <summary>
+/// An optional static entry point for logging that can be easily referenced
+/// by different parts of an application. To configure the <see cref="Log"/>
+/// set the Logger static property to a logger instance.
+/// </summary>
+/// <example>
+/// Log.Logger = new LoggerConfiguration()
+///     .WithConsoleSink()
+///     .CreateLogger();
+///
+/// var thing = "World";
+/// Log.Logger.Information("Hello, {Thing}!", thing);
+/// </example>
+/// <remarks>
+/// The methods on <see cref="Log"/> (and its dynamic sibling <see cref="ILogger"/>) are guaranteed
+/// never to throw exceptions. Methods on all other types may.
+/// </remarks>
+public static class Log
+{
+    static ILogger _logger = Serilog.Core.Logger.None;
+
+    /// <summary>
+    /// The globally-shared logger.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">When <paramref name="value"/> is <code>null</code></exception>
+    public static ILogger Logger
+    {
+        get => _logger;
+        set => _logger = Guard.AgainstNull(value);
+    }
+
+    /// <summary>
+    /// Resets <see cref="Logger"/> to the default and disposes the original if possible
+    /// </summary>
