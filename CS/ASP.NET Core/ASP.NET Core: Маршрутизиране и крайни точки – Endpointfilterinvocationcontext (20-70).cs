@@ -1,0 +1,51 @@
+    /// This list is not read-only to permit modifying of existing arguments by filters.
+    /// </remarks>
+    /// </summary>
+    public abstract IList<object?> Arguments { get; }
+
+    /// <summary>
+    /// Retrieve the argument given its position in the argument list.
+    /// </summary>
+    /// <typeparam name="T">The <see cref="Type"/> of the resolved argument.</typeparam>
+    /// <param name="index">An integer representing the position of the argument in the argument list.</param>
+    /// <returns>The argument at a given <paramref name="index"/>.</returns>
+    public abstract T GetArgument<T>(int index);
+
+    /// <summary>
+    /// Creates the default implementation of a <see cref="EndpointFilterInvocationContext"/>.    
+    /// </summary>
+    public static EndpointFilterInvocationContext Create(HttpContext httpContext) =>
+        new DefaultEndpointFilterInvocationContext(httpContext);
+
+    /// <summary>
+    /// Creates a strongly-typed implementation of a <see cref="EndpointFilterInvocationContext"/>
+    /// given the provided type parameters.
+    /// </summary>
+    public static EndpointFilterInvocationContext Create<T>(HttpContext httpContext, T arg) =>
+        new EndpointFilterInvocationContext<T>(httpContext, arg);
+
+    /// <summary>
+    /// Creates a strongly-typed implementation of a <see cref="EndpointFilterInvocationContext"/>
+    /// given the provided type parameters.
+    /// </summary>
+    public static EndpointFilterInvocationContext Create<T1, T2>(HttpContext httpContext, T1 arg1, T2 arg2) =>
+        new EndpointFilterInvocationContext<T1, T2>(httpContext, arg1, arg2);
+
+    /// <summary>
+    /// Creates a strongly-typed implementation of a <see cref="EndpointFilterInvocationContext"/>
+    /// given the provided type parameters.
+    /// </summary>
+    public static EndpointFilterInvocationContext Create<T1, T2, T3>(HttpContext httpContext, T1 arg1, T2 arg2, T3 arg3) =>
+        new EndpointFilterInvocationContext<T1, T2, T3>(httpContext, arg1, arg2, arg3);
+
+    /// <summary>
+    /// Creates a strongly-typed implementation of a <see cref="EndpointFilterInvocationContext"/>
+    /// given the provided type parameters.
+    /// </summary>
+    public static EndpointFilterInvocationContext Create<T1, T2, T3, T4>(HttpContext httpContext, T1 arg1, T2 arg2, T3 arg3, T4 arg4) =>
+        new EndpointFilterInvocationContext<T1, T2, T3, T4>(httpContext, arg1, arg2, arg3, arg4);
+
+    /// <summary>
+    /// Creates a strongly-typed implementation of a <see cref="EndpointFilterInvocationContext"/>
+    /// given the provided type parameters.
+    /// </summary>
