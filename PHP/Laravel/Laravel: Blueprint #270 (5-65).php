@@ -1,0 +1,61 @@
+use Closure;
+use Illuminate\Database\Connection;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Database\Schema\Grammars\Grammar;
+use Illuminate\Database\Schema\Grammars\MySqlGrammar;
+use Illuminate\Database\Schema\Grammars\SQLiteGrammar;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Fluent;
+use Illuminate\Support\Traits\Macroable;
+
+use function Illuminate\Support\enum_value;
+
+class Blueprint
+{
+    use Macroable;
+
+    /**
+     * The database connection instance.
+     */
+    protected Connection $connection;
+
+    /**
+     * The schema grammar instance.
+     */
+    protected Grammar $grammar;
+
+    /**
+     * The table the blueprint describes.
+     *
+     * @var string
+     */
+    protected $table;
+
+    /**
+     * The columns that should be added to the table.
+     *
+     * @var \Illuminate\Database\Schema\ColumnDefinition[]
+     */
+    protected $columns = [];
+
+    /**
+     * The commands that should be run for the table.
+     *
+     * @var \Illuminate\Support\Fluent[]
+     */
+    protected $commands = [];
+
+    /**
+     * The storage engine that should be used for the table.
+     *
+     * @var string
+     */
+    public $engine;
+
+    /**
+     * The default character set that should be used for the table.
+     *
+     * @var string
+     */
+    public $charset;
