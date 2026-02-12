@@ -1,0 +1,121 @@
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\EventManager;
+use Doctrine\DBAL\Connections\PrimaryReadReplicaConnection;
+use Doctrine\DBAL\LockMode;
+use Doctrine\Deprecations\Deprecation;
+use Doctrine\ORM\Cache\Persister\CachedPersister;
+use Doctrine\ORM\Event\ListenersInvoker;
+use Doctrine\ORM\Event\OnFlushEventArgs;
+use Doctrine\ORM\Event\PostFlushEventArgs;
+use Doctrine\ORM\Event\PostPersistEventArgs;
+use Doctrine\ORM\Event\PostRemoveEventArgs;
+use Doctrine\ORM\Event\PostUpdateEventArgs;
+use Doctrine\ORM\Event\PreFlushEventArgs;
+use Doctrine\ORM\Event\PrePersistEventArgs;
+use Doctrine\ORM\Event\PreRemoveEventArgs;
+use Doctrine\ORM\Event\PreUpdateEventArgs;
+use Doctrine\ORM\Exception\EntityIdentityCollisionException;
+use Doctrine\ORM\Exception\ORMException;
+use Doctrine\ORM\Exception\UnexpectedAssociationValue;
+use Doctrine\ORM\Id\AssignedGenerator;
+use Doctrine\ORM\Internal\HydrationCompleteHandler;
+use Doctrine\ORM\Internal\StronglyConnectedComponents;
+use Doctrine\ORM\Internal\TopologicalSort;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\ORM\Mapping\Reflection\ReflectionPropertiesGetter;
+use Doctrine\ORM\Persisters\Collection\CollectionPersister;
+use Doctrine\ORM\Persisters\Collection\ManyToManyPersister;
+use Doctrine\ORM\Persisters\Collection\OneToManyPersister;
+use Doctrine\ORM\Persisters\Entity\BasicEntityPersister;
+use Doctrine\ORM\Persisters\Entity\EntityPersister;
+use Doctrine\ORM\Persisters\Entity\JoinedSubclassPersister;
+use Doctrine\ORM\Persisters\Entity\SingleTablePersister;
+use Doctrine\ORM\Proxy\InternalProxy;
+use Doctrine\ORM\Utility\IdentifierFlattener;
+use Doctrine\Persistence\Mapping\RuntimeReflectionService;
+use Doctrine\Persistence\NotifyPropertyChanged;
+use Doctrine\Persistence\ObjectManagerAware;
+use Doctrine\Persistence\PropertyChangedListener;
+use Exception;
+use InvalidArgumentException;
+use RuntimeException;
+use Symfony\Component\VarExporter\Hydrator;
+use UnexpectedValueException;
+
+use function array_chunk;
+use function array_combine;
+use function array_diff_key;
+use function array_filter;
+use function array_key_exists;
+use function array_map;
+use function array_merge;
+use function array_sum;
+use function array_values;
+use function assert;
+use function count;
+use function current;
+use function func_get_arg;
+use function func_num_args;
+use function get_class;
+use function get_debug_type;
+use function implode;
+use function in_array;
+use function is_array;
+use function is_object;
+use function method_exists;
+use function reset;
+use function spl_object_id;
+use function sprintf;
+use function strtolower;
+
+use const PHP_VERSION_ID;
+
+/**
+ * The UnitOfWork is responsible for tracking changes to objects during an
+ * "object-level" transaction and for writing out changes to the database
+ * in the correct order.
+ *
+ * Internal note: This class contains highly performance-sensitive code.
+ *
+ * @phpstan-import-type AssociationMapping from ClassMetadata
+ */
+class UnitOfWork implements PropertyChangedListener
+{
+    /**
+     * An entity is in MANAGED state when its persistence is managed by an EntityManager.
+     */
+    public const STATE_MANAGED = 1;
+
+    /**
+     * An entity is new if it has just been instantiated (i.e. using the "new" operator)
+     * and is not (yet) managed by an EntityManager.
+     */
+    public const STATE_NEW = 2;
+
+    /**
+     * A detached entity is an instance with persistent state and identity that is not
+     * (or no longer) associated with an EntityManager (and a UnitOfWork).
+     */
+    public const STATE_DETACHED = 3;
+
+    /**
+     * A removed entity instance is an instance with a persistent identity,
+     * associated with an EntityManager, whose persistent state will be deleted
+     * on commit.
+     */
+    public const STATE_REMOVED = 4;
+
+    /**
+     * Hint used to collect all primary keys of associated entities during hydration
+     * and execute it in a dedicated query afterwards
+     *
+     * @see https://www.doctrine-project.org/projects/doctrine-orm/en/stable/reference/dql-doctrine-query-language.html#temporarily-change-fetch-mode-in-dql
+     */
+    public const HINT_DEFEREAGERLOAD = 'deferEagerLoad';
+
+    /**
+     * The identity map that holds references to all managed entities that have
+     * an identity. The entities are grouped by their class name.
+     * Since all classes in a hierarchy must share the same identifier set,
+     * we always take the root class name of the hierarchy.
