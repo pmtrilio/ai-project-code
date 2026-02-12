@@ -1,0 +1,61 @@
+use function sprintf;
+use function strlen;
+use function strtolower;
+
+use const CONNECTION_NORMAL;
+
+class ResponseEmitter
+{
+    private int $responseChunkSize;
+
+    public function __construct(int $responseChunkSize = 4096)
+    {
+        $this->responseChunkSize = $responseChunkSize;
+    }
+
+    /**
+     * Send the response the client
+     */
+    public function emit(ResponseInterface $response): void
+    {
+        $isEmpty = $this->isResponseEmpty($response);
+        if (headers_sent() === false) {
+            $this->emitHeaders($response);
+
+            // Set the status _after_ the headers, because of PHP's "helpful" behavior with location headers.
+            // See https://github.com/slimphp/Slim/issues/1730
+
+            $this->emitStatusLine($response);
+        }
+
+        if (!$isEmpty) {
+            $this->emitBody($response);
+        }
+    }
+
+    /**
+     * Emit Response Headers
+     */
+    private function emitHeaders(ResponseInterface $response): void
+    {
+        foreach ($response->getHeaders() as $name => $values) {
+            $first = strtolower($name) !== 'set-cookie';
+            foreach ($values as $value) {
+                $header = sprintf('%s: %s', $name, $value);
+                header($header, $first);
+                $first = false;
+            }
+        }
+    }
+
+    /**
+     * Emit Status Line
+     */
+    private function emitStatusLine(ResponseInterface $response): void
+    {
+        $statusLine = sprintf(
+            'HTTP/%s %s %s',
+            $response->getProtocolVersion(),
+            $response->getStatusCode(),
+            $response->getReasonPhrase()
+        );
