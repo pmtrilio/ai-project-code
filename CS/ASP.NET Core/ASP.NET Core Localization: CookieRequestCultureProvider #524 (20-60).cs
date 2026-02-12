@@ -1,0 +1,41 @@
+    public static readonly string DefaultCookieName = ".AspNetCore.Culture";
+
+    /// <summary>
+    /// The name of the cookie that contains the user's preferred culture information.
+    /// Defaults to <see cref="DefaultCookieName"/>.
+    /// </summary>
+    public string CookieName { get; set; } = DefaultCookieName;
+
+    /// <inheritdoc />
+    public override Task<ProviderCultureResult?> DetermineProviderCultureResult(HttpContext httpContext)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        var cookie = httpContext.Request.Cookies[CookieName];
+
+        if (string.IsNullOrEmpty(cookie))
+        {
+            return NullProviderCultureResult;
+        }
+
+        var providerResultCulture = ParseCookieValue(cookie);
+
+        return Task.FromResult<ProviderCultureResult?>(providerResultCulture);
+    }
+
+    /// <summary>
+    /// Creates a string representation of a <see cref="RequestCulture"/> for placement in a cookie.
+    /// </summary>
+    /// <param name="requestCulture">The <see cref="RequestCulture"/>.</param>
+    /// <returns>The cookie value.</returns>
+    public static string MakeCookieValue(RequestCulture requestCulture)
+    {
+        ArgumentNullException.ThrowIfNull(requestCulture);
+
+        return string.Join(_cookieSeparator,
+            $"{_culturePrefix}{requestCulture.Culture.Name}",
+            $"{_uiCulturePrefix}{requestCulture.UICulture.Name}");
+    }
+
+    /// <summary>
+    /// Parses a <see cref="RequestCulture"/> from the specified cookie value.
