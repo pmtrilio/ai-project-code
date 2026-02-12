@@ -1,0 +1,101 @@
+        private HttpVersionPolicy _defaultVersionPolicy = HttpRequestMessage.DefaultVersionPolicy;
+
+        private Uri? _baseAddress;
+        private TimeSpan _timeout;
+        private int _maxResponseContentBufferSize;
+
+        #endregion Fields
+
+        #region Properties
+        public static IWebProxy DefaultProxy
+        {
+            get => LazyInitializer.EnsureInitialized(ref s_defaultProxy, () => SystemProxyInfo.Proxy);
+            set
+            {
+                ArgumentNullException.ThrowIfNull(value);
+                s_defaultProxy = value;
+            }
+        }
+
+        public HttpRequestHeaders DefaultRequestHeaders =>
+            _defaultRequestHeaders ??= new HttpRequestHeaders();
+
+        public Version DefaultRequestVersion
+        {
+            get => _defaultRequestVersion;
+            set
+            {
+                CheckDisposedOrStarted();
+                ArgumentNullException.ThrowIfNull(value);
+                _defaultRequestVersion = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the default value of <see cref="HttpRequestMessage.VersionPolicy" /> for implicitly created requests in convenience methods,
+        /// e.g.: <see cref="GetAsync(string?)" />, <see cref="PostAsync(string?, HttpContent)" />.
+        /// </summary>
+        /// <remarks>
+        /// Note that this property has no effect on any of the <see cref="Send(HttpRequestMessage)" /> and <see cref="SendAsync(HttpRequestMessage)" /> overloads
+        /// since they accept fully initialized <see cref="HttpRequestMessage" />.
+        /// </remarks>
+        public HttpVersionPolicy DefaultVersionPolicy
+        {
+            get => _defaultVersionPolicy;
+            set
+            {
+                CheckDisposedOrStarted();
+                _defaultVersionPolicy = value;
+            }
+        }
+
+        public Uri? BaseAddress
+        {
+            get => _baseAddress;
+            set
+            {
+                // It's OK to not have a base address specified, but if one is, it needs to be absolute.
+                if (value is not null && !value.IsAbsoluteUri)
+                {
+                    throw new ArgumentException(SR.net_http_client_absolute_baseaddress_required, nameof(value));
+                }
+
+                CheckDisposedOrStarted();
+
+                if (NetEventSource.Log.IsEnabled()) NetEventSource.UriBaseAddress(this, value);
+
+                _baseAddress = value;
+            }
+        }
+
+        public TimeSpan Timeout
+        {
+            get => _timeout;
+            set
+            {
+                if (value != s_infiniteTimeout)
+                {
+                    ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(value, s_maxTimeout);
+                }
+                CheckDisposedOrStarted();
+                _timeout = value;
+            }
+        }
+
+        public long MaxResponseContentBufferSize
+        {
+            get => _maxResponseContentBufferSize;
+            set
+            {
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+                if (value > HttpContent.MaxBufferSize)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value,
+                        SR.Format(System.Globalization.CultureInfo.InvariantCulture,
+                        SR.net_http_content_buffersize_limit, HttpContent.MaxBufferSize));
+                }
+                CheckDisposedOrStarted();
+
+                Debug.Assert(HttpContent.MaxBufferSize <= int.MaxValue);
+                _maxResponseContentBufferSize = (int)value;
