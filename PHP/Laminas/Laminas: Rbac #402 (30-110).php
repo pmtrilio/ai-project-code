@@ -1,0 +1,81 @@
+    public function setCreateMissingRoles(bool $createMissingRoles): void
+    {
+        $this->createMissingRoles = $createMissingRoles;
+    }
+
+    public function getCreateMissingRoles(): bool
+    {
+        return $this->createMissingRoles;
+    }
+
+    /**
+     * Add a child.
+     *
+     * @param  string|RoleInterface $role
+     * @param  null|array|RoleInterface $parents
+     * @throws Exception\InvalidArgumentException If $role is not a string or RoleInterface.
+     */
+    public function addRole($role, $parents = null): void
+    {
+        if (is_string($role)) {
+            $role = new Role($role);
+        }
+        if (! $role instanceof RoleInterface) {
+            throw new Exception\InvalidArgumentException(
+                'Role must be a string or implement Laminas\Permissions\Rbac\RoleInterface'
+            );
+        }
+
+        if ($parents !== null) {
+            $parents = is_array($parents) ? $parents : [$parents];
+            /** @var RoleInterface|string $parent */
+            foreach ($parents as $parent) {
+                if ($this->createMissingRoles && ! $this->hasRole($parent)) {
+                    $this->addRole($parent);
+                }
+                if (is_string($parent)) {
+                    $parent = $this->getRole($parent);
+                }
+                $parent->addChild($role);
+            }
+        }
+
+        $this->roles[$role->getName()] = $role;
+    }
+
+    /**
+     * Is a role registered?
+     *
+     * @param  RoleInterface|string $role
+     */
+    public function hasRole($role): bool
+    {
+        if (! is_string($role) && ! $role instanceof RoleInterface) {
+            throw new Exception\InvalidArgumentException(
+                'Role must be a string or implement Laminas\Permissions\Rbac\RoleInterface'
+            );
+        }
+
+        if (is_string($role)) {
+            return isset($this->roles[$role]);
+        }
+
+        $roleName = $role->getName();
+        return isset($this->roles[$roleName])
+            && $this->roles[$roleName] === $role;
+    }
+
+    /**
+     * Get a registered role by name
+     *
+     * @throws Exception\InvalidArgumentException If role is not found.
+     */
+    public function getRole(string $roleName): RoleInterface
+    {
+        if (! isset($this->roles[$roleName])) {
+            throw new Exception\InvalidArgumentException(sprintf(
+                'No role with name "%s" could be found',
+                $roleName
+            ));
+        }
+        return $this->roles[$roleName];
