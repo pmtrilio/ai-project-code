@@ -1,0 +1,60 @@
+
+    /**
+     * Create a new HTTP response.
+     *
+     * @param  mixed  $content
+     * @param  int  $status
+     * @param  array  $headers
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function __construct($content = '', $status = 200, array $headers = [])
+    {
+        $this->headers = new ResponseHeaderBag($headers);
+
+        $this->setContent($content);
+        $this->setStatusCode($status);
+        $this->setProtocolVersion('1.0');
+    }
+
+    /**
+     * Get the response content.
+     */
+    #[\Override]
+    public function getContent(): string|false
+    {
+        return transform(parent::getContent(), fn ($content) => $content, '');
+    }
+
+    /**
+     * Set the content on the response.
+     *
+     * @param  mixed  $content
+     * @return $this
+     *
+     * @throws \InvalidArgumentException
+     */
+    #[\Override]
+    public function setContent(mixed $content): static
+    {
+        $this->original = $content;
+
+        // If the content is "JSONable" we will set the appropriate header and convert
+        // the content to JSON. This is useful when returning something like models
+        // from routes that will be automatically transformed to their JSON form.
+        if ($this->shouldBeJson($content)) {
+            $this->header('Content-Type', 'application/json');
+
+            $content = $this->morphToJson($content);
+
+            if ($content === false) {
+                throw new InvalidArgumentException(json_last_error_msg());
+            }
+        }
+
+        // If this content implements the "Renderable" interface then we will call the
+        // render method on the object so we will avoid any "__toString" exceptions
+        // that might be thrown and have their errors obscured by PHP's handling.
+        elseif ($content instanceof Renderable) {
+            $content = $content->render();
+        }
