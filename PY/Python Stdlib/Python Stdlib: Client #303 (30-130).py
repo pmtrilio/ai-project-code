@@ -1,0 +1,100 @@
+# 2001-09-10 fl  Lazy import of urllib, cgi, xmllib (20x import speedup)
+# 2001-10-01 fl  Remove containers from memo cache when done with them
+# 2001-10-01 fl  Use faster escape method (80% dumps speedup)
+# 2001-10-02 fl  More dumps microtuning
+# 2001-10-04 fl  Make sure import expat gets a parser (from Guido van Rossum)
+# 2001-10-10 sm  Allow long ints to be passed as ints if they don't overflow
+# 2001-10-17 sm  Test for int and long overflow (allows use on 64-bit systems)
+# 2001-11-12 fl  Use repr() to marshal doubles (from Paul Felix)
+# 2002-03-17 fl  Avoid buffered read when possible (from James Rucker)
+# 2002-04-07 fl  Added pythondoc comments
+# 2002-04-16 fl  Added __str__ methods to datetime/binary wrappers
+# 2002-05-15 fl  Added error constants (from Andrew Kuchling)
+# 2002-06-27 fl  Merged with Python CVS version
+# 2002-10-22 fl  Added basic authentication (based on code from Phillip Eby)
+# 2003-01-22 sm  Add support for the bool type
+# 2003-02-27 gvr Remove apply calls
+# 2003-04-24 sm  Use cStringIO if available
+# 2003-04-25 ak  Add support for nil
+# 2003-06-15 gn  Add support for time.struct_time
+# 2003-07-12 gp  Correct marshalling of Faults
+# 2003-10-31 mvl Add multicall support
+# 2004-08-20 mvl Bump minimum supported Python version to 2.1
+# 2014-12-02 ch/doko  Add workaround for gzip bomb vulnerability
+#
+# Copyright (c) 1999-2002 by Secret Labs AB.
+# Copyright (c) 1999-2002 by Fredrik Lundh.
+#
+# info@pythonware.com
+# http://www.pythonware.com
+#
+# --------------------------------------------------------------------
+# The XML-RPC client interface is
+#
+# Copyright (c) 1999-2002 by Secret Labs AB
+# Copyright (c) 1999-2002 by Fredrik Lundh
+#
+# By obtaining, using, and/or copying this software and/or its
+# associated documentation, you agree that you have read, understood,
+# and will comply with the following terms and conditions:
+#
+# Permission to use, copy, modify, and distribute this software and
+# its associated documentation for any purpose and without fee is
+# hereby granted, provided that the above copyright notice appears in
+# all copies, and that both that copyright notice and this permission
+# notice appear in supporting documentation, and that the name of
+# Secret Labs AB or the author not be used in advertising or publicity
+# pertaining to distribution of the software without specific, written
+# prior permission.
+#
+# SECRET LABS AB AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD
+# TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANT-
+# ABILITY AND FITNESS.  IN NO EVENT SHALL SECRET LABS AB OR THE AUTHOR
+# BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY
+# DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+# WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+# ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+# OF THIS SOFTWARE.
+# --------------------------------------------------------------------
+
+"""
+An XML-RPC client interface for Python.
+
+The marshalling and response parser code can also be used to
+implement XML-RPC servers.
+
+Exported exceptions:
+
+  Error          Base class for client errors
+  ProtocolError  Indicates an HTTP protocol error
+  ResponseError  Indicates a broken response package
+  Fault          Indicates an XML-RPC fault package
+
+Exported classes:
+
+  ServerProxy    Represents a logical connection to an XML-RPC server
+
+  MultiCall      Executor of boxcared xmlrpc requests
+  DateTime       dateTime wrapper for an ISO 8601 string or time tuple or
+                 localtime integer value to generate a "dateTime.iso8601"
+                 XML-RPC value
+  Binary         binary data wrapper
+
+  Marshaller     Generate an XML-RPC params chunk from a Python data structure
+  Unmarshaller   Unmarshal an XML-RPC response from incoming XML event message
+  Transport      Handles an HTTP transaction to an XML-RPC server
+  SafeTransport  Handles an HTTPS transaction to an XML-RPC server
+
+Exported constants:
+
+  (none)
+
+Exported functions:
+
+  getparser      Create instance of the fastest available parser & attach
+                 to an unmarshalling object
+  dumps          Convert an argument tuple or a Fault instance to an XML-RPC
+                 request (or response, if the methodresponse option is used).
+  loads          Convert an XML-RPC packet to unmarshalled data plus a method
+                 name (None if not present).
+"""
