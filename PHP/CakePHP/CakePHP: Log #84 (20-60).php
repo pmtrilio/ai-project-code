@@ -1,0 +1,41 @@
+use Closure;
+use InvalidArgumentException;
+use Psr\Log\LoggerInterface;
+use Stringable;
+
+/**
+ * Logs messages to configured Log adapters. One or more adapters
+ * can be configured using Cake Log's methods. If you don't
+ * configure any adapters, and write to Log, the messages will be
+ * ignored.
+ *
+ * ### Configuring Log adapters
+ *
+ * You can configure log adapters in your applications `config/app.php` file.
+ * A sample configuration would look like:
+ *
+ * ```
+ * Log::setConfig('my_log', ['className' => 'FileLog']);
+ * ```
+ *
+ * You can define the className as any fully namespaced classname or use a short hand
+ * classname to use loggers in the `App\Log\Engine` & `Cake\Log\Engine` namespaces.
+ * You can also use plugin short hand to use logging classes provided by plugins.
+ *
+ * Log adapters are required to implement `Psr\Log\LoggerInterface`, and there is a
+ * built-in base class (`Cake\Log\Engine\BaseLog`) that can be used for custom loggers.
+ *
+ * Outside of the `className` key, all other configuration values will be passed to the
+ * logging adapter's constructor as an array.
+ *
+ * ### Logging levels
+ *
+ * When configuring loggers, you can set which levels a logger will handle.
+ * This allows you to disable debug messages in production for example:
+ *
+ * ```
+ * Log::setConfig('default', [
+ *     'className' => 'File',
+ *     'path' => LOGS,
+ *     'levels' => ['error', 'critical', 'alert', 'emergency']
+ * ]);
