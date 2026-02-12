@@ -1,0 +1,80 @@
+[DebuggerDisplay("{DebuggerToString(),nq}")]
+public sealed class DefaultHttpContext : HttpContext
+{
+    // The initial size of the feature collection when using the default constructor; based on number of common features
+    // https://github.com/dotnet/aspnetcore/issues/31249
+    private const int DefaultFeatureCollectionSize = 10;
+
+    // Lambdas hoisted to static readonly fields to improve inlining https://github.com/dotnet/roslyn/issues/13624
+    private static readonly Func<IFeatureCollection, IItemsFeature> _newItemsFeature = f => new ItemsFeature();
+    private static readonly Func<DefaultHttpContext, IServiceProvidersFeature> _newServiceProvidersFeature = context => new RequestServicesFeature(context, context.ServiceScopeFactory);
+    private static readonly Func<IFeatureCollection, IHttpAuthenticationFeature> _newHttpAuthenticationFeature = f => new HttpAuthenticationFeature();
+    private static readonly Func<IFeatureCollection, IHttpRequestLifetimeFeature> _newHttpRequestLifetimeFeature = f => new HttpRequestLifetimeFeature();
+    private static readonly Func<IFeatureCollection, ISessionFeature> _newSessionFeature = f => new DefaultSessionFeature();
+    private static readonly Func<IFeatureCollection, ISessionFeature?> _nullSessionFeature = f => null;
+    private static readonly Func<IFeatureCollection, IHttpRequestIdentifierFeature> _newHttpRequestIdentifierFeature = f => new HttpRequestIdentifierFeature();
+
+    private FeatureReferences<FeatureInterfaces> _features;
+
+    private readonly DefaultHttpRequest _request;
+    private readonly DefaultHttpResponse _response;
+
+    private DefaultConnectionInfo? _connection;
+    private DefaultWebSocketManager? _websockets;
+
+    // This is field exists to make analyzing memory dumps easier.
+    // https://github.com/dotnet/aspnetcore/issues/29709
+    internal bool _active;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultHttpContext"/> class.
+    /// </summary>
+    public DefaultHttpContext()
+        : this(new FeatureCollection(DefaultFeatureCollectionSize))
+    {
+        Features.Set<IHttpRequestFeature>(new HttpRequestFeature());
+        Features.Set<IHttpResponseFeature>(new HttpResponseFeature());
+        Features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(Stream.Null));
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultHttpContext"/> class with provided features.
+    /// </summary>
+    /// <param name="features">Initial set of features for the <see cref="DefaultHttpContext"/>.</param>
+    public DefaultHttpContext(IFeatureCollection features)
+    {
+        _features.Initalize(features);
+        _request = new DefaultHttpRequest(this);
+        _response = new DefaultHttpResponse(this);
+    }
+
+    /// <summary>
+    /// Reinitialize  the current instant of the class with features passed in.
+    /// </summary>
+    /// <remarks>
+    /// This method allows the consumer to re-use the <see cref="DefaultHttpContext" /> for another request, rather than having to allocate a new instance.
+    /// </remarks>
+    /// <param name="features">The new set of features for the <see cref="DefaultHttpContext" />.</param>
+    public void Initialize(IFeatureCollection features)
+    {
+        var revision = features.Revision;
+        _features.Initalize(features, revision);
+        _request.Initialize(revision);
+        _response.Initialize(revision);
+        _connection?.Initialize(features, revision);
+        _websockets?.Initialize(features, revision);
+        _active = true;
+    }
+
+    /// <summary>
+    /// Uninitialize all the features in the <see cref="DefaultHttpContext" />.
+    /// </summary>
+    public void Uninitialize()
+    {
+        _features = default;
+        _request.Uninitialize();
+        _response.Uninitialize();
+        _connection?.Uninitialize();
+        _websockets?.Uninitialize();
+        _active = false;
+    }
