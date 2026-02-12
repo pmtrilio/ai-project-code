@@ -1,0 +1,61 @@
+     * @var \Illuminate\Contracts\Events\Dispatcher
+     */
+    protected $events;
+
+    /**
+     * The migration repository implementation.
+     *
+     * @var \Illuminate\Database\Migrations\MigrationRepositoryInterface
+     */
+    protected $repository;
+
+    /**
+     * The filesystem instance.
+     *
+     * @var \Illuminate\Filesystem\Filesystem
+     */
+    protected $files;
+
+    /**
+     * The connection resolver instance.
+     *
+     * @var \Illuminate\Database\ConnectionResolverInterface
+     */
+    protected $resolver;
+
+    /**
+     * The custom connection resolver callback.
+     *
+     * @var \Closure|null
+     */
+    protected static $connectionResolverCallback;
+
+    /**
+     * The name of the default connection.
+     *
+     * @var string
+     */
+    protected $connection;
+
+    /**
+     * The paths to all of the migration files.
+     *
+     * @var string[]
+     */
+    protected $paths = [];
+
+    /**
+     * The paths that have already been required.
+     *
+     * @var array<string, \Illuminate\Database\Migrations\Migration|null>
+     */
+    protected static $requiredPathCache = [];
+
+    /**
+     * The output interface implementation.
+     *
+     * @var \Symfony\Component\Console\Output\OutputInterface
+     */
+    protected $output;
+
+    /**
