@@ -1,0 +1,101 @@
+
+from . import types
+from ._utils import FLAG_NEEDS_VALUE
+from ._utils import UNSET
+from .exceptions import Abort
+from .exceptions import BadParameter
+from .exceptions import ClickException
+from .exceptions import Exit
+from .exceptions import MissingParameter
+from .exceptions import NoArgsIsHelpError
+from .exceptions import UsageError
+from .formatting import HelpFormatter
+from .formatting import join_options
+from .globals import pop_context
+from .globals import push_context
+from .parser import _OptionParser
+from .parser import _split_opt
+from .termui import confirm
+from .termui import prompt
+from .termui import style
+from .utils import _detect_program_name
+from .utils import _expand_args
+from .utils import echo
+from .utils import make_default_short_help
+from .utils import make_str
+from .utils import PacifyFlushWrapper
+
+if t.TYPE_CHECKING:
+    from .shell_completion import CompletionItem
+
+F = t.TypeVar("F", bound="t.Callable[..., t.Any]")
+V = t.TypeVar("V")
+
+
+def _complete_visible_commands(
+    ctx: Context, incomplete: str
+) -> cabc.Iterator[tuple[str, Command]]:
+    """List all the subcommands of a group that start with the
+    incomplete value and aren't hidden.
+
+    :param ctx: Invocation context for the group.
+    :param incomplete: Value being completed. May be empty.
+    """
+    multi = t.cast(Group, ctx.command)
+
+    for name in multi.list_commands(ctx):
+        if name.startswith(incomplete):
+            command = multi.get_command(ctx, name)
+
+            if command is not None and not command.hidden:
+                yield name, command
+
+
+def _check_nested_chain(
+    base_command: Group, cmd_name: str, cmd: Command, register: bool = False
+) -> None:
+    if not base_command.chain or not isinstance(cmd, Group):
+        return
+
+    if register:
+        message = (
+            f"It is not possible to add the group {cmd_name!r} to another"
+            f" group {base_command.name!r} that is in chain mode."
+        )
+    else:
+        message = (
+            f"Found the group {cmd_name!r} as subcommand to another group "
+            f" {base_command.name!r} that is in chain mode. This is not supported."
+        )
+
+    raise RuntimeError(message)
+
+
+def batch(iterable: cabc.Iterable[V], batch_size: int) -> list[tuple[V, ...]]:
+    return list(zip(*repeat(iter(iterable), batch_size), strict=False))
+
+
+@contextmanager
+def augment_usage_errors(
+    ctx: Context, param: Parameter | None = None
+) -> cabc.Iterator[None]:
+    """Context manager that attaches extra information to exceptions."""
+    try:
+        yield
+    except BadParameter as e:
+        if e.ctx is None:
+            e.ctx = ctx
+        if param is not None and e.param is None:
+            e.param = param
+        raise
+    except UsageError as e:
+        if e.ctx is None:
+            e.ctx = ctx
+        raise
+
+
+def iter_params_for_processing(
+    invocation_order: cabc.Sequence[Parameter],
+    declaration_order: cabc.Sequence[Parameter],
+) -> list[Parameter]:
+    """Returns all declared parameters in the order they should be processed.
