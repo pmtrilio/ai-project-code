@@ -1,0 +1,41 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Diagnostics;
+using System.Linq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Shared;
+
+namespace Microsoft.AspNetCore.Http;
+
+/// <summary>
+/// Encapsulates all HTTP-specific information about an individual HTTP request.
+/// </summary>
+[DebuggerDisplay("{DebuggerToString(),nq}")]
+[DebuggerTypeProxy(typeof(HttpContextDebugView))]
+public abstract class HttpContext
+{
+    /// <summary>
+    /// Gets the collection of HTTP features provided by the server and middleware available on this request.
+    /// </summary>
+    public abstract IFeatureCollection Features { get; }
+
+    /// <summary>
+    /// Gets the <see cref="HttpRequest"/> object for this request.
+    /// </summary>
+    public abstract HttpRequest Request { get; }
+
+    /// <summary>
+    /// Gets the <see cref="HttpResponse"/> object for this request.
+    /// </summary>
+    public abstract HttpResponse Response { get; }
+
+    /// <summary>
+    /// Gets information about the underlying connection for this request.
+    /// </summary>
+    public abstract ConnectionInfo Connection { get; }
+
+    /// <summary>
+    /// Gets an object that manages the establishment of WebSocket connections for this request.
+    /// </summary>
