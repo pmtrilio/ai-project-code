@@ -1,0 +1,81 @@
+using System.Threading.Tasks.Sources;
+
+namespace System.Threading.Tasks
+{
+    /// <summary>
+    /// Represents the current stage in the lifecycle of a <see cref="Task"/>.
+    /// </summary>
+    public enum TaskStatus
+    {
+        /// <summary>
+        /// The task has been initialized but has not yet been scheduled.
+        /// </summary>
+        Created,
+        /// <summary>
+        /// The task is waiting to be activated and scheduled internally by the .NET Framework infrastructure.
+        /// </summary>
+        WaitingForActivation,
+        /// <summary>
+        /// The task has been scheduled for execution but has not yet begun executing.
+        /// </summary>
+        WaitingToRun,
+        /// <summary>
+        /// The task is running but has not yet completed.
+        /// </summary>
+        Running,
+        /// <summary>
+        /// The task has finished executing and is implicitly waiting for
+        /// attached child tasks to complete.
+        /// </summary>
+        WaitingForChildrenToComplete,
+        /// <summary>
+        /// The task completed execution successfully.
+        /// </summary>
+        RanToCompletion,
+        /// <summary>
+        /// The task acknowledged cancellation by throwing an OperationCanceledException with its own CancellationToken
+        /// while the token was in signaled state, or the task's CancellationToken was already signaled before the
+        /// task started executing.
+        /// </summary>
+        Canceled,
+        /// <summary>
+        /// The task completed due to an unhandled exception.
+        /// </summary>
+        Faulted
+    }
+
+    /// <summary>
+    /// Represents an asynchronous operation.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="Task"/> instances may be created in a variety of ways. The most common approach is by
+    /// using the Task type's <see cref="Factory"/> property to retrieve a <see
+    /// cref="TaskFactory"/> instance that can be used to create tasks for several
+    /// purposes. For example, to create a <see cref="Task"/> that runs an action, the factory's StartNew
+    /// method may be used:
+    /// <code>
+    /// // C#
+    /// var t = Task.Factory.StartNew(() => DoAction());
+    ///
+    /// ' Visual Basic
+    /// Dim t = Task.Factory.StartNew(Function() DoAction())
+    /// </code>
+    /// </para>
+    /// <para>
+    /// The <see cref="Task"/> class also provides constructors that initialize the Task but that do not
+    /// schedule it for execution. For performance reasons, TaskFactory's StartNew method should be the
+    /// preferred mechanism for creating and scheduling computational tasks, but for scenarios where creation
+    /// and scheduling must be separated, the constructors may be used, and the task's <see cref="Start()"/>
+    /// method may then be used to schedule the task for execution at a later time.
+    /// </para>
+    /// <para>
+    /// All members of <see cref="Task"/>, except for <see cref="Dispose()"/>, are thread-safe
+    /// and may be used from multiple threads concurrently.
+    /// </para>
+    /// <para>
+    /// For operations that return values, the <see cref="Task{TResult}"/> class
+    /// should be used.
+    /// </para>
+    /// <para>
+    /// For developers implementing custom debuggers, several internal and private members of Task may be
