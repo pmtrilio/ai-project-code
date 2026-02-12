@@ -1,0 +1,41 @@
+    /**
+     * The trusted proxies for the application.
+     *
+     * @var array<int, string>|string|null
+     */
+    protected $proxies;
+
+    /**
+     * The trusted proxies headers for the application.
+     *
+     * @var int
+     */
+    protected $headers = Request::HEADER_X_FORWARDED_FOR |
+        Request::HEADER_X_FORWARDED_HOST |
+        Request::HEADER_X_FORWARDED_PORT |
+        Request::HEADER_X_FORWARDED_PROTO |
+        Request::HEADER_X_FORWARDED_PREFIX |
+        Request::HEADER_X_FORWARDED_AWS_ELB;
+
+    /**
+     * The proxies that have been configured to always be trusted.
+     *
+     * @var array<int, string>|string|null
+     */
+    protected static $alwaysTrustProxies;
+
+    /**
+     * The proxies headers that have been configured to always be trusted.
+     *
+     * @var int|null
+     */
+    protected static $alwaysTrustHeaders;
+
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return mixed
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException
