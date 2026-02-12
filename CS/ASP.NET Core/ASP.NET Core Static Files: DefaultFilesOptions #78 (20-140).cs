@@ -1,0 +1,23 @@
+
+    /// <summary>
+    /// Configuration for the DefaultFilesMiddleware.
+    /// </summary>
+    /// <param name="sharedOptions"></param>
+    public DefaultFilesOptions(SharedOptions sharedOptions)
+        : base(sharedOptions)
+    {
+        // Prioritized list
+        DefaultFileNames = new List<string>
+            {
+                "default.htm",
+                "default.html",
+                "index.htm",
+                "index.html",
+            };
+    }
+
+    /// <summary>
+    /// An ordered list of file names to select by default. List length and ordering may affect performance.
+    /// </summary>
+    public IList<string> DefaultFileNames { get; set; }
+}
