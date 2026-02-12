@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import logging
+import os
+import platform
+import signal
+import socket
+import sys
+import threading
+import time
+from collections.abc import Generator, Sequence
+from email.utils import formatdate
+from types import FrameType
+from typing import TYPE_CHECKING, TypeAlias
+
+import click
+
+from uvicorn._compat import asyncio_run
+from uvicorn.config import Config
+
+if TYPE_CHECKING:
+    from uvicorn.protocols.http.h11_impl import H11Protocol
+    from uvicorn.protocols.http.httptools_impl import HttpToolsProtocol
+    from uvicorn.protocols.websockets.websockets_impl import WebSocketProtocol
+    from uvicorn.protocols.websockets.websockets_sansio_impl import WebSocketsSansIOProtocol
+    from uvicorn.protocols.websockets.wsproto_impl import WSProtocol
+
+    Protocols: TypeAlias = H11Protocol | HttpToolsProtocol | WSProtocol | WebSocketProtocol | WebSocketsSansIOProtocol
+
+HANDLED_SIGNALS = (
+    signal.SIGINT,  # Unix signal 2. Sent by Ctrl+C.
+    signal.SIGTERM,  # Unix signal 15. Sent by `kill <pid>`.
+)
+if sys.platform == "win32":  # pragma: py-not-win32
+    HANDLED_SIGNALS += (signal.SIGBREAK,)  # Windows signal 21. Sent by Ctrl+Break.
+
+logger = logging.getLogger("uvicorn.error")
+
+
+class ServerState:
+    """
+    Shared servers state that is available between all protocol instances.
+    """
+
+    def __init__(self) -> None:
+        self.total_requests = 0
+        self.connections: set[Protocols] = set()
+        self.tasks: set[asyncio.Task[None]] = set()
+        self.default_headers: list[tuple[bytes, bytes]] = []
+
+
+class Server:
+    def __init__(self, config: Config) -> None:
+        self.config = config
+        self.server_state = ServerState()
+
+        self.started = False
+        self.should_exit = False
+        self.force_exit = False
