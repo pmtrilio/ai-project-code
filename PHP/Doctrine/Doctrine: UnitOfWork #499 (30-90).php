@@ -1,0 +1,61 @@
+use Doctrine\ORM\Internal\HydrationCompleteHandler;
+use Doctrine\ORM\Internal\StronglyConnectedComponents;
+use Doctrine\ORM\Internal\TopologicalSort;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\MappingException;
+use Doctrine\ORM\Mapping\Reflection\ReflectionPropertiesGetter;
+use Doctrine\ORM\Persisters\Collection\CollectionPersister;
+use Doctrine\ORM\Persisters\Collection\ManyToManyPersister;
+use Doctrine\ORM\Persisters\Collection\OneToManyPersister;
+use Doctrine\ORM\Persisters\Entity\BasicEntityPersister;
+use Doctrine\ORM\Persisters\Entity\EntityPersister;
+use Doctrine\ORM\Persisters\Entity\JoinedSubclassPersister;
+use Doctrine\ORM\Persisters\Entity\SingleTablePersister;
+use Doctrine\ORM\Proxy\InternalProxy;
+use Doctrine\ORM\Utility\IdentifierFlattener;
+use Doctrine\Persistence\Mapping\RuntimeReflectionService;
+use Doctrine\Persistence\NotifyPropertyChanged;
+use Doctrine\Persistence\ObjectManagerAware;
+use Doctrine\Persistence\PropertyChangedListener;
+use Exception;
+use InvalidArgumentException;
+use RuntimeException;
+use Symfony\Component\VarExporter\Hydrator;
+use UnexpectedValueException;
+
+use function array_chunk;
+use function array_combine;
+use function array_diff_key;
+use function array_filter;
+use function array_key_exists;
+use function array_map;
+use function array_merge;
+use function array_sum;
+use function array_values;
+use function assert;
+use function count;
+use function current;
+use function func_get_arg;
+use function func_num_args;
+use function get_class;
+use function get_debug_type;
+use function implode;
+use function in_array;
+use function is_array;
+use function is_object;
+use function method_exists;
+use function reset;
+use function spl_object_id;
+use function sprintf;
+use function strtolower;
+
+use const PHP_VERSION_ID;
+
+/**
+ * The UnitOfWork is responsible for tracking changes to objects during an
+ * "object-level" transaction and for writing out changes to the database
+ * in the correct order.
+ *
+ * Internal note: This class contains highly performance-sensitive code.
+ *
+ * @phpstan-import-type AssociationMapping from ClassMetadata
