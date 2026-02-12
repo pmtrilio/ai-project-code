@@ -1,0 +1,81 @@
+    /// Initializes <see cref="HttpsRedirectionMiddleware" />.
+    /// </summary>
+    /// <param name="next"></param>
+    /// <param name="options"></param>
+    /// <param name="config"></param>
+    /// <param name="loggerFactory"></param>
+    public HttpsRedirectionMiddleware(RequestDelegate next, IOptions<HttpsRedirectionOptions> options, IConfiguration config, ILoggerFactory loggerFactory)
+    {
+        ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(config);
+
+        _next = next;
+        _config = config;
+
+        var httpsRedirectionOptions = options.Value;
+        if (httpsRedirectionOptions.HttpsPort.HasValue)
+        {
+            _httpsPort = new Lazy<int>(httpsRedirectionOptions.HttpsPort.Value);
+        }
+        else
+        {
+            _httpsPort = new Lazy<int>(TryGetHttpsPort);
+        }
+        _statusCode = httpsRedirectionOptions.RedirectStatusCode;
+        _logger = loggerFactory.CreateLogger<HttpsRedirectionMiddleware>();
+    }
+
+    /// <summary>
+    /// Initializes <see cref="HttpsRedirectionMiddleware" />.
+    /// </summary>
+    /// <param name="next"></param>
+    /// <param name="options"></param>
+    /// <param name="config"></param>
+    /// <param name="loggerFactory"></param>
+    /// <param name="serverAddressesFeature"></param>
+    public HttpsRedirectionMiddleware(RequestDelegate next, IOptions<HttpsRedirectionOptions> options, IConfiguration config, ILoggerFactory loggerFactory,
+        IServerAddressesFeature serverAddressesFeature)
+        : this(next, options, config, loggerFactory)
+    {
+        _serverAddressesFeature = serverAddressesFeature ?? throw new ArgumentNullException(nameof(serverAddressesFeature));
+    }
+
+    /// <summary>
+    /// Invokes the HttpsRedirectionMiddleware.
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public Task Invoke(HttpContext context)
+    {
+        if (context.Request.IsHttps)
+        {
+            return _next(context);
+        }
+
+        var port = _httpsPort.Value;
+        if (port == PortNotFound)
+        {
+            return _next(context);
+        }
+
+        var host = context.Request.Host;
+        if (port != 443)
+        {
+            host = new HostString(host.Host, port);
+        }
+        else
+        {
+            host = new HostString(host.Host);
+        }
+
+        var request = context.Request;
+        var redirectUrl = UriHelper.BuildAbsolute(
+            "https",
+            host,
+            request.PathBase,
+            request.Path,
+            request.QueryString);
+
+        context.Response.StatusCode = _statusCode;
+        context.Response.Headers.Location = redirectUrl;
