@@ -1,0 +1,40 @@
+
+        When `delimiters` is given, it will be used as the set of substrings
+        that divide keys from values.
+
+        When `comment_prefixes` is given, it will be used as the set of
+        substrings that prefix comments in empty lines. Comments can be
+        indented.
+
+        When `inline_comment_prefixes` is given, it will be used as the set of
+        substrings that prefix comments in non-empty lines.
+
+        When `strict` is True, the parser won't allow for any section or option
+        duplicates while reading from a single source (file, string or
+        dictionary). Default is True.
+
+        When `empty_lines_in_values` is False (default: True), each empty line
+        marks the end of an option. Otherwise, internal empty lines of
+        a multiline option are kept as part of the value.
+
+        When `allow_no_value` is True (default: False), options without
+        values are accepted; the value presented for these is None.
+
+        When `default_section` is given, the name of the special section is
+        named accordingly. By default it is called ``"DEFAULT"`` but this can
+        be customized to point to any other valid section name. Its current
+        value can be retrieved using the ``parser_instance.default_section``
+        attribute and may be modified at runtime.
+
+        When `interpolation` is given, it should be an Interpolation subclass
+        instance. It will be used as the handler for option value
+        pre-processing when using getters. RawConfigParser objects don't do
+        any sort of interpolation, whereas ConfigParser uses an instance of
+        BasicInterpolation. The library also provides a ``zc.buildout``
+        inspired ExtendedInterpolation implementation.
+
+        When `converters` is given, it should be a dictionary where each key
+        represents the name of a type converter and each value is a callable
+        implementing the conversion from string to the desired datatype. Every
+        converter gets its corresponding get*() method on the parser object and
+        section proxies.
