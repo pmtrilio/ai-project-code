@@ -1,0 +1,101 @@
+use Symfony\Bundle\FrameworkBundle\DependencyInjection\Compiler\RemoveUnusedSessionMarshallingHandlerPass;
+use Symfony\Bundle\FrameworkBundle\DependencyInjection\Compiler\TestServiceContainerRealRefPass;
+use Symfony\Bundle\FrameworkBundle\DependencyInjection\Compiler\TestServiceContainerWeakRefPass;
+use Symfony\Bundle\FrameworkBundle\DependencyInjection\Compiler\TranslationUpdateCommandPass;
+use Symfony\Bundle\FrameworkBundle\DependencyInjection\Compiler\UnusedTagsPass;
+use Symfony\Bundle\FrameworkBundle\DependencyInjection\VirtualRequestStackPass;
+use Symfony\Component\Cache\Adapter\ApcuAdapter;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\Adapter\ChainAdapter;
+use Symfony\Component\Cache\Adapter\PhpArrayAdapter;
+use Symfony\Component\Cache\Adapter\PhpFilesAdapter;
+use Symfony\Component\Cache\DependencyInjection\CacheCollectorPass;
+use Symfony\Component\Cache\DependencyInjection\CachePoolClearerPass;
+use Symfony\Component\Cache\DependencyInjection\CachePoolPass;
+use Symfony\Component\Cache\DependencyInjection\CachePoolPrunerPass;
+use Symfony\Component\Config\Resource\ClassExistenceResource;
+use Symfony\Component\Console\ConsoleEvents;
+use Symfony\Component\Console\DependencyInjection\AddConsoleCommandPass;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\DependencyInjection\Compiler\RegisterReverseContainerPass;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Dotenv\Dotenv;
+use Symfony\Component\ErrorHandler\ErrorHandler;
+use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
+use Symfony\Component\Form\DependencyInjection\FormPass;
+use Symfony\Component\HttpClient\DependencyInjection\HttpClientPass;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Bundle\Bundle;
+use Symfony\Component\HttpKernel\DependencyInjection\ControllerArgumentValueResolverPass;
+use Symfony\Component\HttpKernel\DependencyInjection\FragmentRendererPass;
+use Symfony\Component\HttpKernel\DependencyInjection\LoggerPass;
+use Symfony\Component\HttpKernel\DependencyInjection\RegisterControllerArgumentLocatorsPass;
+use Symfony\Component\HttpKernel\DependencyInjection\RegisterLocaleAwareServicesPass;
+use Symfony\Component\HttpKernel\DependencyInjection\RemoveEmptyControllerArgumentLocatorsPass;
+use Symfony\Component\HttpKernel\DependencyInjection\ResettableServicePass;
+use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Messenger\DependencyInjection\MessengerPass;
+use Symfony\Component\Mime\DependencyInjection\AddMimeTypeGuesserPass;
+use Symfony\Component\PropertyInfo\DependencyInjection\PropertyInfoPass;
+use Symfony\Component\Routing\DependencyInjection\AddExpressionLanguageProvidersPass;
+use Symfony\Component\Routing\DependencyInjection\RoutingResolverPass;
+use Symfony\Component\Runtime\SymfonyRuntime;
+use Symfony\Component\Scheduler\DependencyInjection\AddScheduleMessengerPass;
+use Symfony\Component\Serializer\DependencyInjection\SerializerPass;
+use Symfony\Component\Translation\DependencyInjection\DataCollectorTranslatorPass;
+use Symfony\Component\Translation\DependencyInjection\LoggingTranslatorPass;
+use Symfony\Component\Translation\DependencyInjection\TranslationDumperPass;
+use Symfony\Component\Translation\DependencyInjection\TranslationExtractorPass;
+use Symfony\Component\Translation\DependencyInjection\TranslatorPass;
+use Symfony\Component\Translation\DependencyInjection\TranslatorPathsPass;
+use Symfony\Component\Validator\DependencyInjection\AddAutoMappingConfigurationPass;
+use Symfony\Component\Validator\DependencyInjection\AddConstraintValidatorsPass;
+use Symfony\Component\Validator\DependencyInjection\AddValidatorInitializersPass;
+use Symfony\Component\VarExporter\Internal\Hydrator;
+use Symfony\Component\VarExporter\Internal\Registry;
+use Symfony\Component\Workflow\DependencyInjection\WorkflowDebugPass;
+use Symfony\Component\Workflow\DependencyInjection\WorkflowGuardListenerPass;
+
+// Help opcache.preload discover always-needed symbols
+class_exists(ApcuAdapter::class);
+class_exists(ArrayAdapter::class);
+class_exists(ChainAdapter::class);
+class_exists(PhpArrayAdapter::class);
+class_exists(PhpFilesAdapter::class);
+class_exists(Dotenv::class);
+class_exists(ErrorHandler::class);
+class_exists(Hydrator::class);
+class_exists(Registry::class);
+
+/**
+ * Bundle.
+ *
+ * @author Fabien Potencier <fabien@symfony.com>
+ */
+class FrameworkBundle extends Bundle
+{
+    /**
+     * @return void
+     */
+    public function boot()
+    {
+        $_ENV['DOCTRINE_DEPRECATIONS'] = $_SERVER['DOCTRINE_DEPRECATIONS'] ??= 'trigger';
+
+        if (class_exists(SymfonyRuntime::class)) {
+            $handler = set_error_handler('var_dump');
+            restore_error_handler();
+        } else {
+            $handler = [ErrorHandler::register(null, false)];
+        }
+
+        if (!$this->container->has('debug.error_handler_configurator')) {
+            // When upgrading an existing Symfony application from 6.2 to 6.3, and
+            // the cache is warmed up, the service is not available yet, so we need
+            // to check if it exists.
+        } elseif (\is_array($handler) && $handler[0] instanceof ErrorHandler) {
+            $this->container->get('debug.error_handler_configurator')->configure($handler[0]);
+        }
+
+        if ($this->container->getParameter('kernel.http_method_override')) {
+            Request::enableHttpMethodParameterOverride();
