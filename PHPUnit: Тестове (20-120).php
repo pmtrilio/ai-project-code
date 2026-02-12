@@ -1,0 +1,101 @@
+use function class_exists;
+use function clearstatcache;
+use function count;
+use function defined;
+use function error_clear_last;
+use function explode;
+use function fclose;
+use function getcwd;
+use function implode;
+use function in_array;
+use function ini_get;
+use function ini_set;
+use function is_array;
+use function is_callable;
+use function is_int;
+use function is_object;
+use function is_string;
+use function is_writable;
+use function libxml_clear_errors;
+use function method_exists;
+use function ob_end_clean;
+use function ob_get_clean;
+use function ob_get_contents;
+use function ob_get_level;
+use function ob_start;
+use function preg_match;
+use function preg_replace;
+use function putenv;
+use function restore_error_handler;
+use function restore_exception_handler;
+use function set_error_handler;
+use function set_exception_handler;
+use function sprintf;
+use function str_contains;
+use function str_starts_with;
+use function stream_get_contents;
+use function stream_get_meta_data;
+use function tmpfile;
+use function trim;
+use AssertionError;
+use DeepCopy\DeepCopy;
+use PHPUnit\Event;
+use PHPUnit\Event\NoPreviousThrowableException;
+use PHPUnit\Framework\Constraint\Exception as ExceptionConstraint;
+use PHPUnit\Framework\Constraint\ExceptionCode;
+use PHPUnit\Framework\Constraint\ExceptionMessageIsOrContains;
+use PHPUnit\Framework\Constraint\ExceptionMessageMatchesRegularExpression;
+use PHPUnit\Framework\MockObject\Exception as MockObjectException;
+use PHPUnit\Framework\MockObject\Generator\Generator as MockGenerator;
+use PHPUnit\Framework\MockObject\MockBuilder;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\MockObjectInternal;
+use PHPUnit\Framework\MockObject\Rule\AnyInvokedCount as AnyInvokedCountMatcher;
+use PHPUnit\Framework\MockObject\Rule\InvokedAtLeastCount as InvokedAtLeastCountMatcher;
+use PHPUnit\Framework\MockObject\Rule\InvokedAtLeastOnce as InvokedAtLeastOnceMatcher;
+use PHPUnit\Framework\MockObject\Rule\InvokedAtMostCount as InvokedAtMostCountMatcher;
+use PHPUnit\Framework\MockObject\Rule\InvokedCount;
+use PHPUnit\Framework\MockObject\Rule\InvokedCount as InvokedCountMatcher;
+use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\MockObject\Stub\Exception as ExceptionStub;
+use PHPUnit\Framework\MockObject\TestStubBuilder;
+use PHPUnit\Framework\TestSize\TestSize;
+use PHPUnit\Framework\TestStatus\TestStatus;
+use PHPUnit\Metadata\Api\Groups;
+use PHPUnit\Metadata\Api\HookMethods;
+use PHPUnit\Metadata\Api\Requirements;
+use PHPUnit\Metadata\Parser\Registry as MetadataRegistry;
+use PHPUnit\Metadata\WithEnvironmentVariable;
+use PHPUnit\Runner\BackedUpEnvironmentVariable;
+use PHPUnit\Runner\DeprecationCollector\Facade as DeprecationCollector;
+use PHPUnit\Runner\HookMethodCollection;
+use PHPUnit\Runner\ShutdownHandler;
+use PHPUnit\TestRunner\TestResult\PassedTests;
+use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
+use PHPUnit\Util\Exporter;
+use PHPUnit\Util\Test as TestUtil;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionMethod;
+use ReflectionObject;
+use SebastianBergmann\CodeCoverage\UnintentionallyCoveredCodeException;
+use SebastianBergmann\Comparator\Comparator;
+use SebastianBergmann\Comparator\Factory as ComparatorFactory;
+use SebastianBergmann\Diff\Differ;
+use SebastianBergmann\Diff\Output\UnifiedDiffOutputBuilder;
+use SebastianBergmann\GlobalState\ExcludeList as GlobalStateExcludeList;
+use SebastianBergmann\GlobalState\Restorer;
+use SebastianBergmann\GlobalState\Snapshot;
+use SebastianBergmann\Invoker\TimeoutException;
+use SebastianBergmann\ObjectEnumerator\Enumerator;
+use Throwable;
+
+/**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ */
+abstract class TestCase extends Assert implements Reorderable, SelfDescribing, Test
+{
+    private ?bool $backupGlobals = null;
+
+    /**
+     * @var list<string>
