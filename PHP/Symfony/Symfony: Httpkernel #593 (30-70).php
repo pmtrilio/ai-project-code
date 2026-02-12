@@ -1,0 +1,41 @@
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\ControllerDoesNotReturnResponseException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+
+// Help opcache.preload discover always-needed symbols
+class_exists(ControllerArgumentsEvent::class);
+class_exists(ControllerEvent::class);
+class_exists(ExceptionEvent::class);
+class_exists(FinishRequestEvent::class);
+class_exists(RequestEvent::class);
+class_exists(ResponseEvent::class);
+class_exists(TerminateEvent::class);
+class_exists(ViewEvent::class);
+class_exists(KernelEvents::class);
+
+/**
+ * HttpKernel notifies events to convert a Request object to a Response one.
+ *
+ * @author Fabien Potencier <fabien@symfony.com>
+ */
+class HttpKernel implements HttpKernelInterface, TerminableInterface
+{
+    protected $dispatcher;
+    protected $resolver;
+    protected $requestStack;
+    private ArgumentResolverInterface $argumentResolver;
+    private bool $handleAllThrowables;
+
+    public function __construct(EventDispatcherInterface $dispatcher, ControllerResolverInterface $resolver, ?RequestStack $requestStack = null, ?ArgumentResolverInterface $argumentResolver = null, bool $handleAllThrowables = false)
+    {
+        $this->dispatcher = $dispatcher;
+        $this->resolver = $resolver;
+        $this->requestStack = $requestStack ?? new RequestStack();
+        $this->argumentResolver = $argumentResolver ?? new ArgumentResolver();
+        $this->handleAllThrowables = $handleAllThrowables;
+    }
+
+    public function handle(Request $request, int $type = HttpKernelInterface::MAIN_REQUEST, bool $catch = true): Response
+    {
