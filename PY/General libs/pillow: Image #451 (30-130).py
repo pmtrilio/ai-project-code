@@ -1,0 +1,101 @@
+import atexit
+import builtins
+import io
+import logging
+import math
+import os
+import re
+import struct
+import sys
+import tempfile
+import warnings
+from collections.abc import MutableMapping
+from enum import IntEnum
+from typing import IO, Protocol, cast
+
+# VERSION was removed in Pillow 6.0.0.
+# PILLOW_VERSION was removed in Pillow 9.0.0.
+# Use __version__ instead.
+from . import (
+    ExifTags,
+    ImageMode,
+    TiffTags,
+    UnidentifiedImageError,
+    __version__,
+    _plugins,
+)
+from ._binary import i32le, o32be, o32le
+from ._deprecate import deprecate
+from ._util import DeferredError, is_path
+
+ElementTree: ModuleType | None
+try:
+    from defusedxml import ElementTree
+except ImportError:
+    ElementTree = None
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator, Sequence
+    from types import ModuleType
+    from typing import Any, Literal
+
+logger = logging.getLogger(__name__)
+
+
+class DecompressionBombWarning(RuntimeWarning):
+    pass
+
+
+class DecompressionBombError(Exception):
+    pass
+
+
+WARN_POSSIBLE_FORMATS: bool = False
+
+# Limit to around a quarter gigabyte for a 24-bit (3 bpp) image
+MAX_IMAGE_PIXELS: int | None = int(1024 * 1024 * 1024 // 4 // 3)
+
+
+try:
+    # If the _imaging C module is not present, Pillow will not load.
+    # Note that other modules should not refer to _imaging directly;
+    # import Image and use the Image.core variable instead.
+    # Also note that Image.core is not a publicly documented interface,
+    # and should be considered private and subject to change.
+    from . import _imaging as core
+
+    if __version__ != getattr(core, "PILLOW_VERSION", None):
+        msg = (
+            "The _imaging extension was built for another version of Pillow or PIL:\n"
+            f"Core version: {getattr(core, 'PILLOW_VERSION', None)}\n"
+            f"Pillow version: {__version__}"
+        )
+        raise ImportError(msg)
+
+except ImportError as v:
+    # Explanations for ways that we know we might have an import error
+    if str(v).startswith("Module use of python"):
+        # The _imaging C module is present, but not compiled for
+        # the right version (windows only).  Print a warning, if
+        # possible.
+        warnings.warn(
+            "The _imaging extension was built for another version of Python.",
+            RuntimeWarning,
+        )
+    elif str(v).startswith("The _imaging extension"):
+        warnings.warn(str(v), RuntimeWarning)
+    # Fail here anyway. Don't let people run with a mostly broken Pillow.
+    # see docs/porting.rst
+    raise
+
+
+#
+# Constants
+
+
+# transpose
+class Transpose(IntEnum):
+    FLIP_LEFT_RIGHT = 0
+    FLIP_TOP_BOTTOM = 1
+    ROTATE_90 = 2
