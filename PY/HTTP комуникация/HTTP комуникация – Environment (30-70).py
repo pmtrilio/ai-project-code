@@ -1,0 +1,41 @@
+from .defaults import LINE_COMMENT_PREFIX
+from .defaults import LINE_STATEMENT_PREFIX
+from .defaults import LSTRIP_BLOCKS
+from .defaults import NEWLINE_SEQUENCE
+from .defaults import TRIM_BLOCKS
+from .defaults import VARIABLE_END_STRING
+from .defaults import VARIABLE_START_STRING
+from .exceptions import TemplateNotFound
+from .exceptions import TemplateRuntimeError
+from .exceptions import TemplatesNotFound
+from .exceptions import TemplateSyntaxError
+from .exceptions import UndefinedError
+from .lexer import get_lexer
+from .lexer import Lexer
+from .lexer import TokenStream
+from .nodes import EvalContext
+from .parser import Parser
+from .runtime import Context
+from .runtime import new_context
+from .runtime import Undefined
+from .utils import _PassArg
+from .utils import concat
+from .utils import consume
+from .utils import import_string
+from .utils import internalcode
+from .utils import LRUCache
+from .utils import missing
+
+if t.TYPE_CHECKING:
+    import typing_extensions as te
+
+    from .bccache import BytecodeCache
+    from .ext import Extension
+    from .loaders import BaseLoader
+
+_env_bound = t.TypeVar("_env_bound", bound="Environment")
+
+
+# for direct template usage we have up to ten living environments
+@lru_cache(maxsize=10)
+def get_spontaneous_environment(cls: type[_env_bound], *args: t.Any) -> _env_bound:
