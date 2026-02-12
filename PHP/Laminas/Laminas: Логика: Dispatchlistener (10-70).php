@@ -1,0 +1,61 @@
+use Laminas\Mvc\Exception\InvalidControllerException;
+use Laminas\Router\RouteMatch;
+use Laminas\ServiceManager\Exception\InvalidServiceException;
+use Laminas\Stdlib\ArrayUtils;
+use Throwable;
+
+use function function_exists;
+use function is_object;
+
+/**
+ * Default dispatch listener
+ *
+ * Pulls controllers from the service manager's "ControllerManager" service.
+ *
+ * If the controller cannot be found a "404" result is set up. Otherwise it
+ * will continue to try to load the controller.
+ *
+ * If the controller is not dispatchable it sets up a "404" result. In case
+ * of any other exceptions it trigger the "dispatch.error" event in an attempt
+ * to return a 500 status.
+ *
+ * If the controller subscribes to InjectApplicationEventInterface, it injects
+ * the current MvcEvent into the controller.
+ *
+ * It then calls the controller's "dispatch" method, passing it the request and
+ * response. If an exception occurs, it triggers the "dispatch.error" event,
+ * in an attempt to return a 500 status.
+ *
+ * The return value of dispatching the controller is placed into the result
+ * property of the MvcEvent, and returned.
+ */
+class DispatchListener extends AbstractListenerAggregate
+{
+    public function __construct(private readonly ControllerManager $controllerManager)
+    {
+    }
+
+    /**
+     * Attach listeners to an event manager
+     *
+     * @param  int $priority
+     * @return void
+     */
+    public function attach(EventManagerInterface $events, $priority = 1)
+    {
+        $this->listeners[] = $events->attach(MvcEvent::EVENT_DISPATCH, [$this, 'onDispatch']);
+        if (function_exists('zend_monitor_custom_event_ex')) {
+            $this->listeners[] = $events->attach(MvcEvent::EVENT_DISPATCH_ERROR, [$this, 'reportMonitorEvent']);
+        }
+    }
+
+    /**
+     * Listen to the "dispatch" event
+     *
+     * @return mixed
+     */
+    public function onDispatch(MvcEvent $e)
+    {
+        if (null !== $e->getResult()) {
+            return;
+        }
