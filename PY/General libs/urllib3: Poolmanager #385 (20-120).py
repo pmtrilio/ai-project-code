@@ -1,0 +1,101 @@
+from .response import BaseHTTPResponse
+from .util.connection import _TYPE_SOCKET_OPTIONS
+from .util.proxy import connection_requires_http_tunnel
+from .util.retry import Retry
+from .util.timeout import Timeout
+from .util.url import Url, parse_url
+
+if typing.TYPE_CHECKING:
+    import ssl
+
+    from typing_extensions import Self
+
+__all__ = ["PoolManager", "ProxyManager", "proxy_from_url"]
+
+
+log = logging.getLogger(__name__)
+
+SSL_KEYWORDS = (
+    "key_file",
+    "cert_file",
+    "cert_reqs",
+    "ca_certs",
+    "ca_cert_data",
+    "ssl_version",
+    "ssl_minimum_version",
+    "ssl_maximum_version",
+    "ca_cert_dir",
+    "ssl_context",
+    "key_password",
+    "server_hostname",
+)
+# Default value for `blocksize` - a new parameter introduced to
+# http.client.HTTPConnection & http.client.HTTPSConnection in Python 3.7
+_DEFAULT_BLOCKSIZE = 16384
+
+
+class PoolKey(typing.NamedTuple):
+    """
+    All known keyword arguments that could be provided to the pool manager, its
+    pools, or the underlying connections.
+
+    All custom key schemes should include the fields in this key at a minimum.
+    """
+
+    key_scheme: str
+    key_host: str
+    key_port: int | None
+    key_timeout: Timeout | float | int | None
+    key_retries: Retry | bool | int | None
+    key_block: bool | None
+    key_source_address: tuple[str, int] | None
+    key_key_file: str | None
+    key_key_password: str | None
+    key_cert_file: str | None
+    key_cert_reqs: str | None
+    key_ca_certs: str | None
+    key_ca_cert_data: str | bytes | None
+    key_ssl_version: int | str | None
+    key_ssl_minimum_version: ssl.TLSVersion | None
+    key_ssl_maximum_version: ssl.TLSVersion | None
+    key_ca_cert_dir: str | None
+    key_ssl_context: ssl.SSLContext | None
+    key_maxsize: int | None
+    key_headers: frozenset[tuple[str, str]] | None
+    key__proxy: Url | None
+    key__proxy_headers: frozenset[tuple[str, str]] | None
+    key__proxy_config: ProxyConfig | None
+    key_socket_options: _TYPE_SOCKET_OPTIONS | None
+    key__socks_options: frozenset[tuple[str, str]] | None
+    key_assert_hostname: bool | str | None
+    key_assert_fingerprint: str | None
+    key_server_hostname: str | None
+    key_blocksize: int | None
+
+
+def _default_key_normalizer(
+    key_class: type[PoolKey], request_context: dict[str, typing.Any]
+) -> PoolKey:
+    """
+    Create a pool key out of a request context dictionary.
+
+    According to RFC 3986, both the scheme and host are case-insensitive.
+    Therefore, this function normalizes both before constructing the pool
+    key for an HTTPS request. If you wish to change this behaviour, provide
+    alternate callables to ``key_fn_by_scheme``.
+
+    :param key_class:
+        The class to use when constructing the key. This should be a namedtuple
+        with the ``scheme`` and ``host`` keys at a minimum.
+    :type  key_class: namedtuple
+    :param request_context:
+        A dictionary-like object that contain the context for a request.
+    :type  request_context: dict
+
+    :return: A namedtuple that can be used as a connection pool key.
+    :rtype:  PoolKey
+    """
+    # Since we mutate the dictionary, make a copy first
+    context = request_context.copy()
+    context["scheme"] = context["scheme"].lower()
+    context["host"] = context["host"].lower()
