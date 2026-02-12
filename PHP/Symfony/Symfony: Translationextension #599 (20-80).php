@@ -1,0 +1,60 @@
+use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Contracts\Translation\TranslatorTrait;
+use Twig\Extension\AbstractExtension;
+use Twig\TwigFilter;
+use Twig\TwigFunction;
+
+// Help opcache.preload discover always-needed symbols
+class_exists(TranslatorInterface::class);
+class_exists(TranslatorTrait::class);
+
+/**
+ * Provides integration of the Translation component with Twig.
+ *
+ * @author Fabien Potencier <fabien@symfony.com>
+ */
+final class TranslationExtension extends AbstractExtension
+{
+    private ?TranslatorInterface $translator;
+    private ?TranslationNodeVisitor $translationNodeVisitor;
+
+    public function __construct(?TranslatorInterface $translator = null, ?TranslationNodeVisitor $translationNodeVisitor = null)
+    {
+        $this->translator = $translator;
+        $this->translationNodeVisitor = $translationNodeVisitor;
+    }
+
+    public function getTranslator(): TranslatorInterface
+    {
+        if (null === $this->translator) {
+            if (!interface_exists(TranslatorInterface::class)) {
+                throw new \LogicException(\sprintf('You cannot use the "%s" if the Translation Contracts are not available. Try running "composer require symfony/translation".', __CLASS__));
+            }
+
+            $this->translator = new class implements TranslatorInterface {
+                use TranslatorTrait;
+            };
+        }
+
+        return $this->translator;
+    }
+
+    public function getFunctions(): array
+    {
+        return [
+            new TwigFunction('t', $this->createTranslatable(...)),
+        ];
+    }
+
+    public function getFilters(): array
+    {
+        return [
+            new TwigFilter('trans', $this->trans(...)),
+        ];
+    }
+
+    public function getTokenParsers(): array
+    {
+        return [
+            // {% trans %}Symfony is great!{% endtrans %}
+            new TransTokenParser(),
