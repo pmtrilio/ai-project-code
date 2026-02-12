@@ -1,0 +1,101 @@
+use Cake\Database\Exception\DatabaseException;
+
+/**
+ * Represents a single table in a database schema.
+ *
+ * Can either be populated using the reflection API's
+ * or by incrementally building an instance using
+ * methods.
+ *
+ * Once created TableSchema instances can be added to
+ * Schema\Collection objects. They can also be converted into SQL using the
+ * createSql(), dropSql() and truncateSql() methods.
+ */
+class TableSchema implements TableSchemaInterface, SqlGeneratorInterface
+{
+    /**
+     * The name of the table
+     *
+     * @var string
+     */
+    protected string $_table;
+
+    /**
+     * Columns in the table.
+     *
+     * @var array<string, \Cake\Database\Schema\Column>
+     */
+    protected array $_columns = [];
+
+    /**
+     * A map with columns to types
+     *
+     * @var array<string, string>
+     */
+    protected array $_typeMap = [];
+
+    /**
+     * Indexes in the table.
+     *
+     * @var array<string, \Cake\Database\Schema\Index>
+     */
+    protected array $_indexes = [];
+
+    /**
+     * Constraints in the table.
+     *
+     * @var array<string, \Cake\Database\Schema\Constraint>
+     */
+    protected array $_constraints = [];
+
+    /**
+     * Options for the table.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $_options = [];
+
+    /**
+     * Whether the table is temporary
+     *
+     * @var bool
+     */
+    protected bool $_temporary = false;
+
+    /**
+     * Column length when using a `tiny` column type
+     *
+     * @var int
+     */
+    public const LENGTH_TINY = 255;
+
+    /**
+     * Column length when using a `medium` column type
+     *
+     * @var int
+     */
+    public const LENGTH_MEDIUM = 16777215;
+
+    /**
+     * Column length when using a `long` column type
+     *
+     * @var int
+     */
+    public const LENGTH_LONG = 4294967295;
+
+    /**
+     * Valid column length that can be used with text type columns
+     *
+     * @var array<string, int>
+     */
+    public static array $columnLengths = [
+        'tiny' => self::LENGTH_TINY,
+        'medium' => self::LENGTH_MEDIUM,
+        'long' => self::LENGTH_LONG,
+    ];
+
+    /**
+     * The valid keys that can be used in a column
+     * definition.
+     *
+     * @var array<string, mixed>
