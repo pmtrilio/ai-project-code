@@ -1,0 +1,121 @@
+#else
+        : LongLivedMarshalByRefObject
+#endif
+    {
+        // NOTE: Be very careful when modifying this class. It uses
+        // conditional compilation extensively and you must give
+        // thought to whether any new features will be supported
+        // on each platform. In particular, instance fields,
+        // properties, initialization and restoration must all
+        // use the same conditions for each feature.
+
+        #region Instance Fields
+
+        /// <summary>
+        /// Link to a prior saved context
+        /// </summary>
+        private readonly TestExecutionContext? _priorContext;
+
+        /// <summary>
+        /// Indicates that a stop has been requested
+        /// </summary>
+        private TestExecutionStatus _executionStatus;
+
+        /// <summary>
+        /// The event listener currently receiving notifications
+        /// </summary>
+        private ITestListener _listener = TestListener.NULL;
+
+        /// <summary>
+        /// The number of assertions for the current test
+        /// </summary>
+        private int _assertCount;
+
+        private Randomizer? _randomGenerator;
+
+        /// <summary>
+        /// The current test result
+        /// </summary>
+        private TestResult _currentResult;
+
+        private SandboxedThreadState _sandboxedThreadState;
+
+        private ExecutionHooks.ExecutionHooks? _executionHooks;
+
+        #endregion
+
+        #region Constructors
+
+        // TODO: Fix design where properties are not set at unknown times.
+
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TestExecutionContext"/> class.
+        /// </summary>
+        public TestExecutionContext()
+        {
+            _priorContext = null;
+            TestCaseTimeout = 0;
+            UpstreamActions = new List<ITestAction>();
+
+            UpdateContextFromEnvironment();
+
+            CurrentValueFormatter = (val) => MsgUtils.DefaultValueFormatter(val);
+            IsSingleThreaded = false;
+            DefaultFloatingPointTolerance = Tolerance.Default;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TestExecutionContext"/> class.
+        /// </summary>
+        /// <param name="other">An existing instance of TestExecutionContext.</param>
+        public TestExecutionContext(TestExecutionContext other)
+        {
+            _priorContext = other;
+
+            CurrentTest = other.CurrentTest;
+            if (other._executionHooks is not null)
+            {
+                _executionHooks = new ExecutionHooks.ExecutionHooks(other._executionHooks);
+            }
+            CurrentResult = other.CurrentResult;
+            TestObject = other.TestObject;
+            _listener = other._listener;
+            StopOnError = other.StopOnError;
+            TestCaseTimeout = other.TestCaseTimeout;
+            ThrowOnEachFailureUnderDebugger = other.ThrowOnEachFailureUnderDebugger;
+            UseCancellation = other.UseCancellation;
+            CancellationToken = other.CancellationToken;
+            UpstreamActions = new List<ITestAction>(other.UpstreamActions);
+
+            _sandboxedThreadState = other._sandboxedThreadState;
+
+            DefaultFloatingPointTolerance = other.DefaultFloatingPointTolerance;
+
+            CurrentValueFormatter = other.CurrentValueFormatter;
+
+            Dispatcher = other.Dispatcher;
+            ParallelScope = other.ParallelScope;
+            IsSingleThreaded = other.IsSingleThreaded;
+        }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+        #endregion
+
+        #region CurrentContext Instance
+
+        // NOTE: We use different implementations for various platforms.
+
+#if !NETFRAMEWORK
+        private static readonly AsyncLocal<TestExecutionContext?> AsyncLocalCurrentContext = new();
+        /// <summary>
+        /// Gets and sets the current context.
+        /// </summary>
+        [AllowNull]
+        public static TestExecutionContext CurrentContext
+        {
+            get => AsyncLocalCurrentContext.Value ??= new AdhocContext();
+            internal set // internal so that AdhocTestExecutionTests can get at it
+                => AsyncLocalCurrentContext.Value = value;
+        }
