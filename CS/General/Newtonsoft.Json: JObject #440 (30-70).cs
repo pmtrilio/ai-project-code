@@ -1,0 +1,41 @@
+using System.Collections.Specialized;
+#endif
+using System.ComponentModel;
+#if HAVE_DYNAMIC
+using System.Dynamic;
+using System.Linq.Expressions;
+#endif
+using System.IO;
+using Newtonsoft.Json.Utilities;
+using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Diagnostics.CodeAnalysis;
+#if !HAVE_LINQ
+using Newtonsoft.Json.Utilities.LinqBridge;
+#else
+using System.Linq;
+#endif
+
+namespace Newtonsoft.Json.Linq
+{
+    /// <summary>
+    /// Represents a JSON object.
+    /// </summary>
+    /// <example>
+    ///   <code lang="cs" source="..\Src\Newtonsoft.Json.Tests\Documentation\LinqToJsonTests.cs" region="LinqToJsonCreateParse" title="Parsing a JSON Object from Text" />
+    /// </example>
+    public partial class JObject : JContainer, IDictionary<string, JToken?>, INotifyPropertyChanged
+#if HAVE_COMPONENT_MODEL
+        , ICustomTypeDescriptor
+#endif
+#if HAVE_INOTIFY_PROPERTY_CHANGING
+        , INotifyPropertyChanging
+#endif
+    {
+        private readonly JPropertyKeyedCollection _properties = new JPropertyKeyedCollection();
+
+        /// <summary>
+        /// Gets the container's children tokens.
+        /// </summary>
+        /// <value>The container's children tokens.</value>
+        protected override IList<JToken> ChildrenTokens => _properties;
