@@ -1,0 +1,41 @@
+<?php
+
+namespace Illuminate\Support;
+
+use Closure;
+use Illuminate\Support\Traits\Macroable;
+use League\CommonMark\Environment\Environment;
+use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
+use League\CommonMark\Extension\InlinesOnly\InlinesOnlyExtension;
+use League\CommonMark\GithubFlavoredMarkdownConverter;
+use League\CommonMark\MarkdownConverter;
+use Ramsey\Uuid\Codec\TimestampFirstCombCodec;
+use Ramsey\Uuid\Exception\InvalidUuidStringException;
+use Ramsey\Uuid\Generator\CombGenerator;
+use Ramsey\Uuid\Rfc4122\FieldsInterface;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidFactory;
+use Symfony\Component\Uid\Ulid;
+use Throwable;
+use Traversable;
+use voku\helper\ASCII;
+
+class Str
+{
+    use Macroable;
+
+    /**
+     * The cache of snake-cased words.
+     *
+     * @var array
+     */
+    protected static $snakeCache = [];
+
+    /**
+     * The cache of camel-cased words.
+     *
+     * @var array
+     */
+    protected static $camelCache = [];
+
+    /**
