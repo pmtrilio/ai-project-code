@@ -1,0 +1,101 @@
+{
+    readonly IReadOnlyList<Action<ServiceBinderBase>> addMethodActions;
+
+    internal ServerServiceDefinition(List<Action<ServiceBinderBase>> addMethodActions)
+    {
+        this.addMethodActions = addMethodActions.AsReadOnly();
+    }
+
+    /// <summary>
+    /// Forwards all the previously stored <c>AddMethod</c> calls to the service binder.
+    /// </summary>
+    public void BindService(ServiceBinderBase serviceBinder)
+    {
+        foreach (var addMethodAction in addMethodActions)
+        {
+            addMethodAction(serviceBinder);
+        }
+    }
+
+    /// <summary>
+    /// Creates a new builder object for <c>ServerServiceDefinition</c>.
+    /// </summary>
+    /// <returns>The builder object.</returns>
+    public static Builder CreateBuilder()
+    {
+        return new Builder();
+    }
+
+    /// <summary>
+    /// Builder class for <see cref="ServerServiceDefinition"/>.
+    /// </summary>
+    public class Builder
+    {
+        // to maintain legacy behavior, we need to detect duplicate keys and throw the same exception as before
+        readonly Dictionary<string, object?> duplicateDetector = new Dictionary<string, object?>();
+        // for each AddMethod call, we store an action that will later register the method and handler with ServiceBinderBase
+        readonly List<Action<ServiceBinderBase>> addMethodActions = new List<Action<ServiceBinderBase>>();
+
+        /// <summary>
+        /// Creates a new instance of builder.
+        /// </summary>
+        public Builder()
+        {
+        }
+
+        /// <summary>
+        /// Adds a definition for a single request - single response method.
+        /// </summary>
+        /// <typeparam name="TRequest">The request message class.</typeparam>
+        /// <typeparam name="TResponse">The response message class.</typeparam>
+        /// <param name="method">The method.</param>
+        /// <param name="handler">The method handler.</param>
+        /// <returns>This builder instance.</returns>
+        public Builder AddMethod<TRequest, TResponse>(
+            Method<TRequest, TResponse> method,
+            UnaryServerMethod<TRequest, TResponse> handler)
+                where TRequest : class
+                where TResponse : class
+        {
+            duplicateDetector.Add(method.FullName, null);
+            addMethodActions.Add((serviceBinder) => serviceBinder.AddMethod(method, handler));
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a definition for a client streaming method.
+        /// </summary>
+        /// <typeparam name="TRequest">The request message class.</typeparam>
+        /// <typeparam name="TResponse">The response message class.</typeparam>
+        /// <param name="method">The method.</param>
+        /// <param name="handler">The method handler.</param>
+        /// <returns>This builder instance.</returns>
+        public Builder AddMethod<TRequest, TResponse>(
+            Method<TRequest, TResponse> method,
+            ClientStreamingServerMethod<TRequest, TResponse> handler)
+                where TRequest : class
+                where TResponse : class
+        {
+            duplicateDetector.Add(method.FullName, null);
+            addMethodActions.Add((serviceBinder) => serviceBinder.AddMethod(method, handler));
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a definition for a server streaming method.
+        /// </summary>
+        /// <typeparam name="TRequest">The request message class.</typeparam>
+        /// <typeparam name="TResponse">The response message class.</typeparam>
+        /// <param name="method">The method.</param>
+        /// <param name="handler">The method handler.</param>
+        /// <returns>This builder instance.</returns>
+        public Builder AddMethod<TRequest, TResponse>(
+            Method<TRequest, TResponse> method,
+            ServerStreamingServerMethod<TRequest, TResponse> handler)
+                where TRequest : class
+                where TResponse : class
+        {
+            duplicateDetector.Add(method.FullName, null);
+            addMethodActions.Add((serviceBinder) => serviceBinder.AddMethod(method, handler));
+            return this;
+        }
