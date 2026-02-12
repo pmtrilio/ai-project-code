@@ -1,0 +1,5 @@
+        $this->parameters = $parameters;
+
+        return $this;
+    }
+}
