@@ -1,0 +1,61 @@
+import matplotlib.table as mtable
+import matplotlib.text as mtext
+import matplotlib.ticker as mticker
+import matplotlib.transforms as mtransforms
+import matplotlib.tri as mtri
+import matplotlib.units as munits
+from matplotlib import _api, _docstring, _preprocess_data, _style_helpers
+from matplotlib.axes._base import (
+    _AxesBase, _TransformedBoundsLocator, _process_plot_format)
+from matplotlib.axes._secondary_axes import SecondaryAxis
+from matplotlib.container import (
+    BarContainer, ErrorbarContainer, PieContainer, StemContainer)
+from matplotlib.text import Text
+from matplotlib.transforms import _ScaledRotation
+
+_log = logging.getLogger(__name__)
+
+
+# The axes module contains all the wrappers to plotting functions.
+# All the other methods should go in the _AxesBase class.
+
+
+def _make_axes_method(func):
+    """
+    Patch the qualname for functions that are directly added to Axes.
+
+    Some Axes functionality is defined in functions in other submodules.
+    These are simply added as attributes to Axes. As a result, their
+    ``__qualname__`` is e.g. only "table" and not "Axes.table". This
+    function fixes that.
+
+    Note that the function itself is patched, so that
+    ``matplotlib.table.table.__qualname__` will also show "Axes.table".
+    However, since these functions are not intended to be standalone,
+    this is bearable.
+    """
+    func.__qualname__ = f"Axes.{func.__name__}"
+    return func
+
+
+class _GroupedBarReturn:
+    """
+    A provisional result object for `.Axes.grouped_bar`.
+
+    This is a placeholder for a future better return type. We try to build in
+    backward compatibility / migration possibilities.
+
+    The only public interfaces are the ``bar_containers`` attribute and the
+    ``remove()`` method.
+    """
+    def __init__(self, bar_containers):
+        self.bar_containers = bar_containers
+
+    def remove(self):
+        [b.remove() for b in self.bar_containers]
+
+
+@_docstring.interpd
+class Axes(_AxesBase):
+    """
+    An Axes object encapsulates all the elements of an individual (sub-)plot in
