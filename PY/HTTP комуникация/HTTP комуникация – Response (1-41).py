@@ -1,0 +1,41 @@
+import datetime
+import io
+import json
+import mimetypes
+import os
+import re
+import sys
+import time
+import warnings
+from email.header import Header
+from http.client import responses
+from urllib.parse import urlsplit
+
+from asgiref.sync import async_to_sync, sync_to_async
+
+from django.conf import settings
+from django.core import signals, signing
+from django.core.exceptions import DisallowedRedirect
+from django.core.serializers.json import DjangoJSONEncoder
+from django.http.cookie import SimpleCookie
+from django.utils import timezone
+from django.utils.datastructures import CaseInsensitiveMapping
+from django.utils.encoding import iri_to_uri
+from django.utils.functional import cached_property
+from django.utils.http import (
+    MAX_URL_REDIRECT_LENGTH,
+    content_disposition_header,
+    http_date,
+)
+from django.utils.regex_helper import _lazy_re_compile
+
+_charset_from_content_type_re = _lazy_re_compile(
+    r";\s*charset=(?P<charset>[^\s;]+)", re.I
+)
+
+
+class ResponseHeaders(CaseInsensitiveMapping):
+    def __init__(self, data):
+        """
+        Populate the initial data using __setitem__ to ensure values are
+        correctly encoded.
