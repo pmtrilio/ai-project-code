@@ -1,0 +1,121 @@
+use function rawurlencode;
+use function sprintf;
+use function str_replace;
+use function strlen;
+use function strtr;
+
+/**
+ * Segment route.
+ */
+class Segment implements RouteInterface
+{
+    /**
+     * Cache for the encode output.
+     *
+     * @var array<string, string>
+     */
+    protected static $cacheEncode = [];
+
+    /**
+     * Map of allowed special chars in path segments.
+     *
+     * http://tools.ietf.org/html/rfc3986#appendix-A
+     * segement      = *pchar
+     * pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
+     * unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
+     * sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
+     *               / "*" / "+" / "," / ";" / "="
+     *
+     * @var array<string, string>
+     */
+    protected static $urlencodeCorrectionMap = [
+        '%21' => "!", // sub-delims
+        '%24' => "$", // sub-delims
+        '%26' => "&", // sub-delims
+        '%27' => "'", // sub-delims
+        '%28' => "(", // sub-delims
+        '%29' => ")", // sub-delims
+        '%2A' => "*", // sub-delims
+        '%2B' => "+", // sub-delims
+        '%2C' => ",", // sub-delims
+//      '%2D' => "-", // unreserved - not touched by rawurlencode
+//      '%2E' => ".", // unreserved - not touched by rawurlencode
+        '%3A' => ":", // pchar
+        '%3B' => ";", // sub-delims
+        '%3D' => "=", // sub-delims
+        '%40' => "@", // pchar
+//      '%5F' => "_", // unreserved - not touched by rawurlencode
+//      '%7E' => "~", // unreserved - not touched by rawurlencode
+    ];
+
+    /**
+     * Parts of the route.
+     *
+     * @var array
+     */
+    protected $parts;
+
+    /**
+     * Regex used for matching the route.
+     *
+     * @var string
+     */
+    protected $regex;
+
+    /**
+     * Map from regex groups to parameter names.
+     *
+     * @var array
+     */
+    protected $paramMap = [];
+
+    /**
+     * Default values.
+     *
+     * @var array
+     */
+    protected $defaults;
+
+    /**
+     * List of assembled parameters.
+     *
+     * @var array
+     */
+    protected $assembledParams = [];
+
+    /**
+     * Translation keys used in the regex.
+     *
+     * @var array
+     */
+    protected $translationKeys = [];
+
+    /**
+     * @internal
+     * @deprecated Since 3.9.0 This property will be removed or made private in version 4.0
+     *
+     * @var int|null
+     */
+    public $priority;
+
+    /**
+     * Create a new regex route.
+     *
+     * @param  string $route
+     */
+    public function __construct($route, array $constraints = [], array $defaults = [])
+    {
+        $this->defaults = $defaults;
+        $this->parts    = $this->parseRouteDefinition($route);
+        $this->regex    = $this->buildRegex($this->parts, $constraints);
+    }
+
+    /**
+     * factory(): defined by RouteInterface interface.
+     *
+     * @see    \Laminas\Router\RouteInterface::factory()
+     *
+     * @param  iterable $options
+     * @return Segment
+     * @throws Exception\InvalidArgumentException
+     */
