@@ -1,0 +1,81 @@
+"""HTTP Client for asyncio."""
+
+import asyncio
+import base64
+import dataclasses
+import hashlib
+import json
+import os
+import sys
+import traceback
+import warnings
+from collections.abc import (
+    Awaitable,
+    Callable,
+    Collection,
+    Coroutine,
+    Generator,
+    Iterable,
+    Mapping,
+    Sequence,
+)
+from contextlib import suppress
+from types import TracebackType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Generic,
+    Literal,
+    TypedDict,
+    TypeVar,
+    final,
+    overload,
+)
+
+from multidict import CIMultiDict, MultiDict, MultiDictProxy, istr
+from yarl import URL, Query
+
+from . import hdrs, http, payload
+from ._websocket.reader import WebSocketDataQueue
+from .abc import AbstractCookieJar
+from .client_exceptions import (
+    ClientConnectionError,
+    ClientConnectionResetError,
+    ClientConnectorCertificateError,
+    ClientConnectorDNSError,
+    ClientConnectorError,
+    ClientConnectorSSLError,
+    ClientError,
+    ClientHttpProxyError,
+    ClientOSError,
+    ClientPayloadError,
+    ClientProxyConnectionError,
+    ClientResponseError,
+    ClientSSLError,
+    ConnectionTimeoutError,
+    ContentTypeError,
+    InvalidURL,
+    InvalidUrlClientError,
+    InvalidUrlRedirectClientError,
+    NonHttpUrlClientError,
+    NonHttpUrlRedirectClientError,
+    RedirectClientError,
+    ServerConnectionError,
+    ServerDisconnectedError,
+    ServerFingerprintMismatch,
+    ServerTimeoutError,
+    SocketTimeoutError,
+    TooManyRedirects,
+    WSMessageTypeError,
+    WSServerHandshakeError,
+)
+from .client_middlewares import ClientMiddlewareType, build_client_middlewares
+from .client_reqrep import (
+    SSL_ALLOWED_TYPES,
+    ClientRequest,
+    ClientResponse,
+    Fingerprint,
+    RequestInfo,
+)
+from .client_ws import (
