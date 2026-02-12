@@ -1,0 +1,41 @@
+        {
+            Initialize(ReadOnlySpan<char>.Empty);
+        }
+
+        [CLSCompliant(false)]
+        public unsafe SecureString(char* value, int length)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            ArgumentOutOfRangeException.ThrowIfNegative(length);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(length, MaxLength);
+
+            Initialize(new ReadOnlySpan<char>(value, length));
+        }
+
+        private void Initialize(ReadOnlySpan<char> value)
+        {
+            _buffer = UnmanagedBuffer.Allocate(GetAlignedByteSize(value.Length));
+            _decryptedLength = value.Length;
+
+            SafeBuffer? bufferToRelease = null;
+            try
+            {
+                Span<char> span = AcquireSpan(ref bufferToRelease);
+                value.CopyTo(span);
+            }
+            finally
+            {
+                ProtectMemory();
+                bufferToRelease?.DangerousRelease();
+            }
+        }
+
+        private SecureString(SecureString str)
+        {
+            Debug.Assert(str._buffer != null, "Expected other SecureString's buffer to be non-null");
+            Debug.Assert(str._encrypted, "Expected to be used only on encrypted SecureStrings");
+
+            _buffer = UnmanagedBuffer.Allocate((int)str._buffer.ByteLength);
+            Debug.Assert(_buffer != null);
+            UnmanagedBuffer.Copy(str._buffer, _buffer, str._buffer.ByteLength);
