@@ -1,19 +1,4 @@
-    {
-        return Arr::pull($this->items, $key, $default);
-    }
-
-    /**
-     * Put an item in the collection by key.
-     *
-     * @param  TKey  $key
-     * @param  TValue  $value
-     * @return $this
-     */
-    public function put($key, $value)
-    {
-        $this->offsetSet($key, $value);
-
-        return $this;
+return $this;
     }
 
     /**
@@ -65,3 +50,18 @@
      *
      * @return static
      */
+    public function reverse()
+    {
+        return new static(array_reverse($this->items, true));
+    }
+
+    /**
+     * Search the collection for a given value and return the corresponding key if successful.
+     *
+     * @param  TValue|(callable(TValue,TKey): bool)  $value
+     * @param  bool  $strict
+     * @return TKey|false
+     */
+    public function search($value, $strict = false)
+    {
+        if (! $this->useAsCallable($value)) {
