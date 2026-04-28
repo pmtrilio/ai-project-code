@@ -1,0 +1,63 @@
+/**
+ * Проверява дали потребителят съществува и паролата му е валидна.
+ *
+ * @param string $user SAM-Account-Name (без домейн, примерно „ivan.georgiev“)
+ * @param string $password
+ * @param string $domain NT-домейн (NETBIOS) – примерно „MYCOMPANY“
+ * @param string $baseDN Base DN за търсене – примерно „DC=mycompany,DC=local“
+ * @param string $ldapHost LDAP сървър – примерно „dc01.mycompany.local“
+ * @param int $ldapPort 389 (LDAP) или 636 (LDAPS)
+ * @return bool
+ */
+function adAuthenticate(
+ string $user,
+ string $password,
+ string $domain,
+ string $baseDN,
+ string $ldapHost = 'dc01.mycompany.local',
+ int $ldapPort = 389
+): bool {
+ // 1. Формираме „UPN“ или „NT-style“ потребител
+ $userUPN = $user . '@' . strtolower($domain); // ivan.georgiev@mycompany.local
+ // Алтернативно: $userNT = $domain . '\\' . $user; // MYCOMPANY\ivan.georgiev
+
+ // 2. Включваме LDAP протокола
+ $ldap = ldap_connect($ldapHost, $ldapPort);
+ if (!$ldap) {
+ error_log('LDAP connect failed');
+ return false;
+ }
+
+ // 3. Задължителни опции за AD (протокол версия и реферали)
+ ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, 3);
+ ldap_set_option($ldap, LDAP_OPT_REFERRALS, 0); // 0 за AD
+
+ // 4. Опит за „bind“ = удостоверяване
+ $bind = @ldap_bind($ldap, $userUPN, $password);
+ if (!$bind) {
+ error_log('LDAP bind failed: ' . ldap_error($ldap));
+ ldap_close($ldap);
+ return false;
+ }
+
+ // 5. (По желание) Допълнително търсене на потребителя
+ $filter = '(sAMAccountName=' . ldap_escape($user, '', LDAP_ESCAPE_FILTER) . ')';
+ $search = ldap_search($ldap, $baseDN, $filter, ['displayName', 'mail']);
+ if ($search) {
+ $entries = ldap_get_entries($ldap, $search);
+ if ($entries['count'] > 0) {
+ // Потребителят е намерен – можем да ползваме displayName, mail и др.
+ }
+ }
+
+ // 6. Затваряме връзката
+ ldap_close($ldap);
+ return true;
+}
+
+/* ---------------- Примерно използване ---------------- */
+if (adAuthenticate('ivan.georgiev', 'MySecretPass', 'MYCOMPANY', 'DC=mycompany,DC=local')) {
+ echo "Успешен вход!";
+} else {
+ echo "Грешно потребителско име или парола.";
+}
