@@ -1,63 +1,101 @@
-/**
- * Проверява дали потребителят съществува и паролата му е валидна.
- *
- * @param string $user SAM-Account-Name (без домейн, примерно „ivan.georgiev“)
- * @param string $password
- * @param string $domain NT-домейн (NETBIOS) – примерно „MYCOMPANY“
- * @param string $baseDN Base DN за търсене – примерно „DC=mycompany,DC=local“
- * @param string $ldapHost LDAP сървър – примерно „dc01.mycompany.local“
- * @param int $ldapPort 389 (LDAP) или 636 (LDAPS)
- * @return bool
- */
-function adAuthenticate(
- string $user,
- string $password,
- string $domain,
- string $baseDN,
- string $ldapHost = 'dc01.mycompany.local',
- int $ldapPort = 389
-): bool {
- // 1. Формираме „UPN“ или „NT-style“ потребител
- $userUPN = $user . '@' . strtolower($domain); // ivan.georgiev@mycompany.local
- // Алтернативно: $userNT = $domain . '\\' . $user; // MYCOMPANY\ivan.georgiev
+use League\OAuth2\Server\Grant\GrantTypeInterface;
+use League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;
+use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
+use League\OAuth2\Server\Repositories\ScopeRepositoryInterface;
+use League\OAuth2\Server\RequestTypes\AuthorizationRequestInterface;
+use League\OAuth2\Server\ResponseTypes\AbstractResponseType;
+use League\OAuth2\Server\ResponseTypes\BearerTokenResponse;
+use League\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use SensitiveParameter;
 
- // 2. Включваме LDAP протокола
- $ldap = ldap_connect($ldapHost, $ldapPort);
- if (!$ldap) {
- error_log('LDAP connect failed');
- return false;
- }
+class AuthorizationServer implements EmitterAwareInterface
+{
+    use EmitterAwarePolyfill;
 
- // 3. Задължителни опции за AD (протокол версия и реферали)
- ldap_set_option($ldap, LDAP_OPT_PROTOCOL_VERSION, 3);
- ldap_set_option($ldap, LDAP_OPT_REFERRALS, 0); // 0 за AD
+    /**
+     * @var GrantTypeInterface[]
+     */
+    protected array $enabledGrantTypes = [];
 
- // 4. Опит за „bind“ = удостоверяване
- $bind = @ldap_bind($ldap, $userUPN, $password);
- if (!$bind) {
- error_log('LDAP bind failed: ' . ldap_error($ldap));
- ldap_close($ldap);
- return false;
- }
+    /**
+     * @var DateInterval[]
+     */
+    protected array $grantTypeAccessTokenTTL = [];
 
- // 5. (По желание) Допълнително търсене на потребителя
- $filter = '(sAMAccountName=' . ldap_escape($user, '', LDAP_ESCAPE_FILTER) . ')';
- $search = ldap_search($ldap, $baseDN, $filter, ['displayName', 'mail']);
- if ($search) {
- $entries = ldap_get_entries($ldap, $search);
- if ($entries['count'] > 0) {
- // Потребителят е намерен – можем да ползваме displayName, mail и др.
- }
- }
+    protected CryptKeyInterface $privateKey;
 
- // 6. Затваряме връзката
- ldap_close($ldap);
- return true;
-}
+    protected CryptKeyInterface $publicKey;
 
-/* ---------------- Примерно използване ---------------- */
-if (adAuthenticate('ivan.georgiev', 'MySecretPass', 'MYCOMPANY', 'DC=mycompany,DC=local')) {
- echo "Успешен вход!";
-} else {
- echo "Грешно потребителско име или парола.";
-}
+    protected ResponseTypeInterface $responseType;
+
+    private string|Key $encryptionKey;
+
+    private string $defaultScope = '';
+
+    private bool $revokeRefreshTokens = true;
+
+    /**
+     * New server instance
+     */
+    public function __construct(
+        private ClientRepositoryInterface $clientRepository,
+        private AccessTokenRepositoryInterface $accessTokenRepository,
+        private ScopeRepositoryInterface $scopeRepository,
+        #[SensitiveParameter]
+        CryptKeyInterface|string $privateKey,
+        #[SensitiveParameter]
+        Key|string $encryptionKey,
+        ResponseTypeInterface|null $responseType = null
+    ) {
+        if ($privateKey instanceof CryptKeyInterface === false) {
+            $privateKey = new CryptKey($privateKey);
+        }
+
+        $this->privateKey = $privateKey;
+        $this->encryptionKey = $encryptionKey;
+
+        if ($responseType === null) {
+            $responseType = new BearerTokenResponse();
+        } else {
+            $responseType = clone $responseType;
+        }
+
+        $this->responseType = $responseType;
+    }
+
+    /**
+     * Enable a grant type on the server
+     */
+    public function enableGrantType(GrantTypeInterface $grantType, DateInterval|null $accessTokenTTL = null): void
+    {
+        if ($accessTokenTTL === null) {
+            $accessTokenTTL = new DateInterval('PT1H');
+        }
+
+        $grantType->setAccessTokenRepository($this->accessTokenRepository);
+        $grantType->setClientRepository($this->clientRepository);
+        $grantType->setScopeRepository($this->scopeRepository);
+        $grantType->setDefaultScope($this->defaultScope);
+        $grantType->setPrivateKey($this->privateKey);
+        $grantType->setEmitter($this->getEmitter());
+        $grantType->setEncryptionKey($this->encryptionKey);
+        $grantType->revokeRefreshTokens($this->revokeRefreshTokens);
+
+        $this->enabledGrantTypes[$grantType->getIdentifier()] = $grantType;
+        $this->grantTypeAccessTokenTTL[$grantType->getIdentifier()] = $accessTokenTTL;
+    }
+
+    /**
+     * Validate an authorization request
+     *
+     * @throws OAuthServerException
+     */
+    public function validateAuthorizationRequest(ServerRequestInterface $request): AuthorizationRequestInterface
+    {
+        foreach ($this->enabledGrantTypes as $grantType) {
+            if ($grantType->canRespondToAuthorizationRequest($request)) {
+                return $grantType->validateAuthorizationRequest($request);
+            }
+        }
