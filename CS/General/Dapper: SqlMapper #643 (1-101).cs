@@ -29,7 +29,7 @@ namespace Dapper
     /// </summary>
     public static partial class SqlMapper
     {
-        private class PropertyInfoByNameComparer : IComparer<PropertyInfo>
+        private sealed class PropertyInfoByNameComparer : IComparer<PropertyInfo>
         {
             public int Compare(PropertyInfo? x, PropertyInfo? y) => string.CompareOrdinal(x?.Name, y?.Name);
         }
@@ -98,4 +98,4 @@ namespace Dapper
                 return true;
             }
             value = null;
-            return false;
+            return false;
