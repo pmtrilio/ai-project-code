@@ -1,5 +1,4 @@
-    get_namespace_and_device,
-    move_to,
+move_to,
 )
 from sklearn.utils._param_validation import Interval, RealNotInt, validate_params
 from sklearn.utils.extmath import _approximate_mode
@@ -78,3 +77,5 @@ class BaseCrossValidator(_MetadataRequester, metaclass=ABCMeta):
 
     Implementations must define `_iter_test_masks` or `_iter_test_indices`.
     """
+
+    # This indicates that by default CV splitters don't have a "groups" kwarg,
